@@ -10,3 +10,6 @@
 [submodule "src/ros/unitree_ros2"]
 	path = src/ros/unitree_ros2
 	url = https://github.com/unitreerobotics/unitree_ros2
+[submodule "src/ros/livox_ros_driver2"]
+	path = src/ros/livox_ros_driver2
+	url = https://github.com/Livox-SDK/livox_ros_driver2.git
