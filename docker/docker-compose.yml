@@ -1,4 +1,3 @@
-version: '3'
 services: 
   unitree_ros2-jetson:
     volumes: 
@@ -55,4 +54,41 @@ services:
     # Perhaps Unitree will provide a dockerhub image later to save you time compiling.
     privileged: true
     network_mode: "host"
+  fast-lio-ros2:
+    image: fast-lio-ros2
+    container_name: fast-lio-ros2
+    stdin_open: true
+    tty: true
 
+    privileged: true
+
+    # --net=host
+    network_mode: "host"
+
+    # --ipc=host
+    ipc: "host"
+
+    # --shm-size=4gb
+    shm_size: "4gb"
+
+    # --runtime=nvidia 相当（Composeでは gpus 推奨）
+    gpus: "all"
+
+    environment:
+      NVIDIA_DRIVER_CAPABILITIES: "all"
+      NVIDIA_VISIBLE_DEVICES: "all"
+      DISPLAY: ${DISPLAY}
+
+    volumes:
+      # --volume="$PROJECT_DIR:/root/ros2_ws/src"
+      # composeファイルを PROJECT_DIR に置く前提
+      - ..:/workspace:cached
+
+      # --volume=/data/LIDAR_dataset:/root/data
+      - /data/LIDAR_dataset:/root/data
+
+      # --volume=/tmp/.X11-unix:/tmp/.X11-unix:rw
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+
+    command: /bin/sh -c "while sleep 1000; do :; done"
+    
