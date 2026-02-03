@@ -2,8 +2,3 @@
 /src/ros/install/
 /src/ros/log/
 /.vscode/
-/src/ros/Log/*.png
-/src/ros/Log/*.txt
-/src/ros/Log/*.csv
-/src/ros/Log/*.pdf
-/src/ros/PCD/*.pcd
