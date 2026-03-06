@@ -22,13 +22,15 @@ docker compose exec fast-lio-ros2 bash
 コンテナ内で実行:
 
 ```bash
+# FAST_LIO の依存 (ikd-Tree) が無い場合のみ取得
+if [ ! -f /root/ros2_ws/src/FAST_LIO/include/ikd-Tree/ikd_Tree.cpp ]; then
+  rm -rf /root/ros2_ws/src/FAST_LIO/include/ikd-Tree
+  git clone https://github.com/hku-mars/ikd-Tree.git /root/ros2_ws/src/FAST_LIO/include/ikd-Tree
+fi
+
 cd /root/ros2_ws/src/livox_ros_driver2
 source /opt/ros/humble/setup.bash
 ./build.sh humble
-
-cd /root/ros2_ws
-source install/setup.bash
-colcon build --packages-select fast_lio --symlink-install
 source install/setup.bash
 ```
 
