@@ -10,6 +10,8 @@ services:
     environment:
       - DISPLAY=${DISPLAY}
       - XAUTHORITY=/tmp/.Xauthority
+      - NVIDIA_DRIVER_CAPABILITIES=all
+      - NVIDIA_VISIBLE_DEVICES=all
 
     cap_add:
       - SYS_PTRACE  
@@ -25,6 +27,7 @@ services:
     # to use the development environment, or you can build it with Dockerfile.
     # Perhaps Unitree will provide a dockerhub image later to save you time compiling.
     privileged: true
+    runtime: nvidia
     network_mode: "host"
 
   unitree_ros2-azure:
@@ -71,8 +74,8 @@ services:
     # --shm-size=4gb
     shm_size: "4gb"
 
-    # --runtime=nvidia 相当（Composeでは gpus 推奨）
-    gpus: "all"
+    # 旧docker-compose互換のGPU指定
+    runtime: nvidia
 
     environment:
       NVIDIA_DRIVER_CAPABILITIES: "all"
