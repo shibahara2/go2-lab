@@ -61,6 +61,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.slam
+      network: host
     image: fast-lio-ros2
     container_name: fast-lio-ros2
     stdin_open: true
