@@ -85,6 +85,9 @@ services:
       NVIDIA_DRIVER_CAPABILITIES: "all"
       NVIDIA_VISIBLE_DEVICES: "all"
       DISPLAY: ${DISPLAY}
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
     working_dir: /workspace
 
     volumes:
