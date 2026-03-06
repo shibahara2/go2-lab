@@ -1,12 +1,12 @@
 #!/bin/bash
-
 set -e
 
-# Ros build
-source "/opt/ros/humble/setup.bash"
+if [ -f "/opt/ros/humble/setup.bash" ]; then
+  source /opt/ros/humble/setup.bash
+fi
 
-echo "==============FAST-LIO ROS2 Docker Env Ready================"
-
-cd /root/ros2_ws
+if [ -f "/root/ros2_ws/install/setup.bash" ]; then
+  source /root/ros2_ws/install/setup.bash
+fi
 
 exec "$@"

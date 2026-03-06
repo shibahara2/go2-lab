@@ -58,6 +58,9 @@ services:
     privileged: true
     network_mode: "host"
   fast-lio-ros2:
+    build:
+      context: .
+      dockerfile: Dockerfile.slam
     image: fast-lio-ros2
     container_name: fast-lio-ros2
     stdin_open: true
@@ -83,9 +86,9 @@ services:
       DISPLAY: ${DISPLAY}
 
     volumes:
-      # --volume="$PROJECT_DIR:/root/ros2_ws/src"
-      # composeファイルを PROJECT_DIR に置く前提
-      - ..:/workspace:cached
+      # FAST_LIO と livox_ros_driver2 を ros2_ws/src 配下にマウント
+      - ../src/ros/FAST_LIO:/root/ros2_ws/src/FAST_LIO
+      - ../src/ros/livox_ros_driver2:/root/ros2_ws/src/livox_ros_driver2
 
       # --volume=/data/LIDAR_dataset:/root/data
       - /data/LIDAR_dataset:/root/data
@@ -93,5 +96,5 @@ services:
       # --volume=/tmp/.X11-unix:/tmp/.X11-unix:rw
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
 
-    command: /bin/sh -c "while sleep 1000; do :; done"
+    command: /bin/bash -lc "while sleep 1000; do :; done"
     
