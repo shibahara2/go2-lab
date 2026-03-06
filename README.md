@@ -80,6 +80,7 @@ fi
 
 source /opt/ros/humble/setup.bash
 cd /workspace
+rm -rf build install log
 colcon build --base-paths src/ros --symlink-install \
   --packages-skip turtlesim
 source install/setup.bash

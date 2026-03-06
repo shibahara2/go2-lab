@@ -24,7 +24,7 @@ RUN apt-get update && apt-get install -y cmake libatlas-base-dev libeigen3-dev l
 RUN apt-get install -y ros-humble-tf2 ros-humble-cv-bridge ros-humble-pcl-conversions ros-humble-xacro ros-humble-robot-state-publisher \
     ros-humble-rviz2 ros-humble-image-transport ros-humble-image-transport-plugins ros-humble-pcl-ros \
     ros-humble-rosidl-generator-dds-idl ros-humble-rmw-cyclonedds-cpp \
-    ros-humble-rmw-fastrtps-cpp ros-humble-rosidl-typesupport-fastrtps-c \
+    ros-humble-rosidl-typesupport-c ros-humble-rmw-fastrtps-cpp ros-humble-rosidl-typesupport-fastrtps-c \
     ros-humble-rosidl-typesupport-fastrtps-cpp
 
 # Install livox SDK
