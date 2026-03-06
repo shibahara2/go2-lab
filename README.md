@@ -80,7 +80,8 @@ fi
 
 source /opt/ros/humble/setup.bash
 cd /workspace
-colcon build --base-paths src/ros --symlink-install
+colcon build --base-paths src/ros --symlink-install \
+  --packages-skip ros_tutorials roscpp_tutorials rospy_tutorials turtlesim
 source install/setup.bash
 ```
 

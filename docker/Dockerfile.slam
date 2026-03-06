@@ -21,7 +21,8 @@ RUN apt update -q && \
 # Install PCL & Eigen & essential libraries
 RUN apt-get update && apt-get install -y cmake libatlas-base-dev libeigen3-dev libpcl-dev libgoogle-glog-dev libsuitesparse-dev libglew-dev wget unzip git python3-pip
 RUN apt-get install -y ros-humble-tf2 ros-humble-cv-bridge ros-humble-pcl-conversions ros-humble-xacro ros-humble-robot-state-publisher \
-    ros-humble-rviz2 ros-humble-image-transport ros-humble-image-transport-plugins ros-humble-pcl-ros
+    ros-humble-rviz2 ros-humble-image-transport ros-humble-image-transport-plugins ros-humble-pcl-ros \
+    ros-humble-rosidl-generator-dds-idl ros-humble-rmw-cyclonedds-cpp
 
 # Install livox SDK
 WORKDIR /root/
@@ -31,19 +32,9 @@ RUN mkdir build
 WORKDIR /root/Livox-SDK2/build
 RUN cmake .. && make -j2 && make install
 
-# # for unitree_ros2
-# RUN apt-get update -q && \
-#     apt-get install -y \
-#     ros-humble-rosidl-generator-dds-idl \
-#     ros-humble-rmw-cyclonedds-cpp
-
-# # Download unitree_ros2
-# WORKDIR /root/
-# RUN git clone https://github.com/unitreerobotics/unitree_ros2
-
 RUN /bin/bash -c '. /opt/ros/humble/setup.bash;'
 
-WORKDIR /root/ros2_ws
+WORKDIR /workspace
 
 # Load ROS environment at each run
 COPY ./ros_entrypoint.sh /
