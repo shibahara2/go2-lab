@@ -25,7 +25,7 @@ nvidia-docker run --privileged -it \
   --runtime=nvidia \
   -e NVIDIA_DRIVER_CAPABILITIES=all \
   -e NVIDIA_VISIBLE_DEVICES=all \
-  --volume="$PROJECT_DIR:/root/ros2_ws/src" \
+  --volume="$PROJECT_DIR:/workspace" \
   --volume=/data/LIDAR_dataset:/root/data \
   --volume=/tmp/.X11-unix:/tmp/.X11-unix:rw \
   --net=host \
@@ -33,4 +33,5 @@ nvidia-docker run --privileged -it \
   --shm-size=4gb \
   --name="$CONTAINER_NAME" \
   --env="DISPLAY=$DISPLAY" \
+  --workdir=/workspace \
   "$IMAGE_NAME" /bin/bash

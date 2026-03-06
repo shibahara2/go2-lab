@@ -1,0 +1,29 @@
+repositories:
+  src/ros/FAST_LIO:
+    type: git
+    url: https://github.com/hku-mars/FAST_LIO.git
+    version: 7cc4175de6f8ba2edf34bab02a42195b141027e9
+  src/ros/FAST_LIO/include/ikd-Tree:
+    type: git
+    url: https://github.com/hku-mars/ikd-Tree.git
+    version: e2e3f4e9d3b95a9e66b1ba83dc98d4a05ed8a3c4
+  src/ros/livox_ros_driver2:
+    type: git
+    url: https://github.com/Livox-SDK/livox_ros_driver2.git
+    version: 6b9356cadf77084619ba406e6a0eb41163b08039
+  src/ros/ros_tutorials:
+    type: git
+    url: https://github.com/ros/ros_tutorials.git
+    version: 23877fdd9ad9959e0b3147f75c0f66eb2783fe9c
+  src/ros/unitree_ros2:
+    type: git
+    url: https://github.com/unitreerobotics/unitree_ros2.git
+    version: 3ff13ea08ec619496c2651fd21b172f7958dd5a5
+  src/zenoh:
+    type: git
+    url: https://github.com/eclipse-zenoh/zenoh.git
+    version: 44f8b24898bb7c49af54e7476fb9fefd5f7e37bf
+  src/zenoh-plugin-ros2dds:
+    type: git
+    url: https://github.com/eclipse-zenoh/zenoh-plugin-ros2dds.git
+    version: 592422b10c4fe52ab0d5a4123a5f4462fc955001

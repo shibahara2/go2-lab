@@ -84,11 +84,11 @@ services:
       NVIDIA_DRIVER_CAPABILITIES: "all"
       NVIDIA_VISIBLE_DEVICES: "all"
       DISPLAY: ${DISPLAY}
+    working_dir: /workspace
 
     volumes:
-      # FAST_LIO と livox_ros_driver2 を ros2_ws/src 配下にマウント
-      - ../src/ros/FAST_LIO:/root/ros2_ws/src/FAST_LIO
-      - ../src/ros/livox_ros_driver2:/root/ros2_ws/src/livox_ros_driver2
+      # ホストのディレクトリ構成をそのまま使う
+      - ..:/workspace:cached
 
       # --volume=/data/LIDAR_dataset:/root/data
       - /data/LIDAR_dataset:/root/data
