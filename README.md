@@ -5,3 +5,5 @@
 - [ ] このリポジトリに入れる
 - [ ] Jetsonでimageビルド、コンテナ実行できるか確認
 
+# MEMO
+- livox_ros_driver2をビルドしたい。build.shを使うと他のrosパッケージまで巻き込まれる。colcon buildにするとcmakeに適切な引数が渡らずエラーになる。
