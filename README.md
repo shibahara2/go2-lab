@@ -41,7 +41,7 @@ uvx vcs pull $(uvx vcs list < go2.repos)
 ```bash
 # 1) vcstool を入れる
 sudo apt-get update
-sudo apt-get install -y python3-vcstool
+sudo apt-get install -y vcstool
 
 # 2) このリポジトリのルートで実行
 cd /home/unitree/go2-lab
@@ -66,11 +66,37 @@ cp configs/livox/MID360_config.json src/ros/livox_ros_driver2/config/MID360_conf
 
 ## 4. Docker イメージ作成とビルド
 
+デプロイ先ごとに `TARGET` を切り替えます。
+
 ```bash
-cd /home/unitree/go2-lab/docker
-docker compose build fast-lio-ros2
-docker compose up -d fast-lio-ros2
-docker compose exec fast-lio-ros2 bash
+cd /home/unitree/go2-lab
+
+# Jetson 向け (fast-lio-ros2)
+make build TARGET=jetson
+make up TARGET=jetson
+make shell TARGET=jetson
+
+# 可視化PC向け (unitree_ros2-azure)
+make build TARGET=desktop
+make up TARGET=desktop
+make shell TARGET=desktop
+```
+
+`src` 配下のデプロイ対象は以下のファイルで管理します。
+- 共通: `configs/deploy/src-common.txt`
+- Jetson固有差分: `configs/deploy/src-jetson.txt`
+- desktop PC固有差分: `configs/deploy/src-desktop.txt`
+
+`make src-list TARGET=<target>` は `common + target固有差分` の合成結果を表示します。
+将来ターゲットを増やす場合は `configs/deploy/src-<new-target>.txt` を追加します。
+（Docker コンテナ実行が必要なら `Makefile` に `PROFILE/SERVICES` の対応を追加）
+
+確認/ステージング:
+
+```bash
+cd /home/unitree/go2-lab
+make src-list TARGET=jetson
+make src-stage TARGET=jetson STAGE_DIR=.staging/jetson
 ```
 
 コンテナ内:
@@ -110,8 +136,8 @@ zenohd -c zenoh-config-azure.json
 ### 6.2 Jetson: FAST-LIO コンテナへ入り ROS2環境読み込み
 
 ```bash
-cd /home/unitree/go2-lab/docker
-docker compose exec fast-lio-ros2 bash
+cd /home/unitree/go2-lab
+make shell TARGET=jetson
 
 source /opt/ros/humble/setup.bash
 source /workspace/install/setup.bash

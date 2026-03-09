@@ -1,0 +1,2 @@
+# Paths under repository root specific to desktop only.
+# Shared paths should go to src-common.txt.

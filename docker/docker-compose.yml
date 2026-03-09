@@ -1,5 +1,7 @@
 services: 
   unitree_ros2-jetson:
+    profiles: ["jetson"]
+    platform: linux/arm64
     volumes: 
       - ..:/workspace:cached
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
@@ -31,6 +33,8 @@ services:
     network_mode: "host"
 
   unitree_ros2-azure:
+    profiles: ["desktop"]
+    platform: linux/amd64
     volumes:
       - ..:/workspace:cached
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
@@ -58,6 +62,8 @@ services:
     privileged: true
     network_mode: "host"
   fast-lio-ros2:
+    profiles: ["jetson"]
+    platform: linux/arm64
     build:
       context: .
       dockerfile: Dockerfile.slam
