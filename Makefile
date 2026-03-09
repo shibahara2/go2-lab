@@ -17,7 +17,7 @@ SERVICES =
 PRIMARY_SERVICE =
 endif
 
-.PHONY: help build up down ps logs shell src-list src-stage colcon-build require-docker-target
+.PHONY: help build up down ps logs shell src-list src-stage colcon-build zenoh-build target-build require-docker-target
 
 help:
 	@echo "Usage:"
@@ -28,6 +28,8 @@ help:
 	@echo "  make src-list TARGET=jetson # list src paths for target"
 	@echo "  make src-stage TARGET=jetson STAGE_DIR=.staging/jetson"
 	@echo "  make colcon-build TARGET=desktop # build only target-classified ROS paths"
+	@echo "  make zenoh-build TARGET=desktop  # build target-classified Rust workspaces"
+	@echo "  make target-build TARGET=desktop # build ROS + Rust with one command"
 	@echo "  # add future targets via configs/deploy/src-<target>.txt"
 
 require-docker-target:
@@ -74,10 +76,33 @@ src-stage:
 
 colcon-build:
 	@set -e; \
-	paths="$$( $(LIST_TARGET_SRC) $(TARGET) | grep '^src/ros/' | tr '\n' ' ' )"; \
+	paths="$$( $(LIST_TARGET_SRC) $(TARGET) | while IFS= read -r p; do \
+		if [ -f "$$p/package.xml" ] || [ -f "$$p/package_ROS2.xml" ]; then \
+			printf '%s ' "$$p"; \
+		fi; \
+	done )"; \
 	if [ -z "$$paths" ]; then \
-		echo "No ROS source paths found for TARGET=$(TARGET)"; \
-		exit 1; \
+		echo "No ROS package paths found for TARGET=$(TARGET); skipping colcon build."; \
+		exit 0; \
 	fi; \
 	echo "colcon base paths:$$paths"; \
 	colcon build --base-paths $$paths --symlink-install --packages-skip turtlesim
+
+zenoh-build:
+	@set -e; \
+	paths="$$( $(LIST_TARGET_SRC) $(TARGET) | while IFS= read -r p; do \
+		if [ -f "$$p/Cargo.toml" ]; then \
+			printf '%s\n' "$$p"; \
+		fi; \
+	done )"; \
+	if [ -z "$$paths" ]; then \
+		echo "No Rust workspace paths found for TARGET=$(TARGET); skipping cargo build."; \
+		exit 0; \
+	fi; \
+	echo "$$paths" | while IFS= read -r p; do \
+		[ -z "$$p" ] && continue; \
+		echo "cargo build --release ($$p)"; \
+		( cd "$$p" && cargo build --release ); \
+	done
+
+target-build: colcon-build zenoh-build

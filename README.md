@@ -105,9 +105,9 @@ make src-stage TARGET=jetson STAGE_DIR=.staging/jetson
 source /opt/ros/humble/setup.bash
 cd /workspace
 rm -rf build install log
-make colcon-build TARGET=jetson
+make target-build TARGET=jetson
 # desktop 側なら:
-# make colcon-build TARGET=desktop
+# make target-build TARGET=desktop
 source install/setup.bash
 ```
 
