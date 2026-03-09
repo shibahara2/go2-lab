@@ -17,7 +17,7 @@ SERVICES =
 PRIMARY_SERVICE =
 endif
 
-.PHONY: help build up down ps logs shell src-list src-stage require-docker-target
+.PHONY: help build up down ps logs shell src-list src-stage colcon-build require-docker-target
 
 help:
 	@echo "Usage:"
@@ -27,6 +27,7 @@ help:
 	@echo "  make shell TARGET=jetson   # enter primary container"
 	@echo "  make src-list TARGET=jetson # list src paths for target"
 	@echo "  make src-stage TARGET=jetson STAGE_DIR=.staging/jetson"
+	@echo "  make colcon-build TARGET=desktop # build only target-classified ROS paths"
 	@echo "  # add future targets via configs/deploy/src-<target>.txt"
 
 require-docker-target:
@@ -70,3 +71,13 @@ src-stage:
 		rsync -a --exclude '.git' "$$p/" "$(STAGE_DIR)/$$p/"; \
 	done
 	@echo "Staged source set for $(TARGET): $(STAGE_DIR)"
+
+colcon-build:
+	@set -e; \
+	paths="$$( $(LIST_TARGET_SRC) $(TARGET) | grep '^src/ros/' | tr '\n' ' ' )"; \
+	if [ -z "$$paths" ]; then \
+		echo "No ROS source paths found for TARGET=$(TARGET)"; \
+		exit 1; \
+	fi; \
+	echo "colcon base paths:$$paths"; \
+	colcon build --base-paths $$paths --symlink-install --packages-skip turtlesim

@@ -105,7 +105,9 @@ make src-stage TARGET=jetson STAGE_DIR=.staging/jetson
 source /opt/ros/humble/setup.bash
 cd /workspace
 rm -rf build install log
-colcon build --base-paths src/ros --symlink-install --packages-skip turtlesim
+make colcon-build TARGET=jetson
+# desktop 側なら:
+# make colcon-build TARGET=desktop
 source install/setup.bash
 ```
 
