@@ -1,2 +1,4 @@
 # Paths under repository root specific to Jetson only.
 # Shared paths should go to src-common.txt.
+src/ros/FAST_LIO
+src/ros/livox_ros_driver2

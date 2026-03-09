@@ -1,8 +1,6 @@
 # Paths under repository root shared by all deployment targets.
 # One path per line. Blank lines and lines starting with # are ignored.
-src/ros/FAST_LIO
 src/ros/cmd_vel_control
-src/ros/livox_ros_driver2
 src/ros/ros_tutorials
 src/unitree_ros2
 src/zenoh
