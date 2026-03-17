@@ -1,0 +1,130 @@
+[0.000000] (-) TimerEvent: {}
+[0.002565] (cmd_vel_control) JobQueued: {'identifier': 'cmd_vel_control', 'dependencies': OrderedDict()}
+[0.003438] (zenoh_bridge_ros2dds) JobQueued: {'identifier': 'zenoh_bridge_ros2dds', 'dependencies': OrderedDict()}
+[0.004887] (cmd_vel_control) JobStarted: {'identifier': 'cmd_vel_control'}
+[0.031497] (zenoh_bridge_ros2dds) JobStarted: {'identifier': 'zenoh_bridge_ros2dds'}
+[0.068781] (cmd_vel_control) JobProgress: {'identifier': 'cmd_vel_control', 'progress': 'cmake'}
+[0.073169] (cmd_vel_control) Command: {'cmd': ['/usr/bin/cmake', '/workspace/src/ros/cmd_vel_control', '-DAMENT_CMAKE_SYMLINK_INSTALL=1', '-DCMAKE_INSTALL_PREFIX=/workspace/install/cmd_vel_control'], 'cwd': '/workspace/build/cmd_vel_control', 'env': OrderedDict([('HOSTNAME', 'lima-rancher-desktop'), ('LD_LIBRARY_PATH', '/opt/ros/humble/opt/rviz_ogre_vendor/lib:/opt/ros/humble/lib/x86_64-linux-gnu:/opt/ros/humble/lib'), ('SHLVL', '1'), ('TARGET', 'desktop'), ('HOME', '/root'), ('ROS_PYTHON_VERSION', '3'), ('MAKEFLAGS', ' -- TARGET=desktop'), ('MAKE_TERMERR', '/dev/pts/0'), ('ROS_DISTRO', 'humble'), ('_', '/usr/bin/make'), ('ROS_VERSION', '2'), ('TERM', 'xterm'), ('ROS_LOCALHOST_ONLY', '0'), ('PATH', '/opt/ros/humble/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'), ('MAKELEVEL', '1'), ('DISPLAY', '/private/tmp/com.apple.launchd.cVlXIVFRpv/org.xquartz:0'), ('LANG', 'C.UTF-8'), ('XAUTHORITY', '/tmp/.Xauthority'), ('LS_COLORS', 'rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=00:su=37;41:sg=30;43:ca=30;41:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.zst=01;31:*.tzst=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.wim=01;31:*.swm=01;31:*.dwm=01;31:*.esd=01;31:*.jpg=01;35:*.jpeg=01;35:*.mjpg=01;35:*.mjpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.webp=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.m4a=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.oga=00;36:*.opus=00;36:*.spx=00;36:*.xspf=00;36:'), ('MAKEOVERRIDES', '${-*-command-variables-*-}'), ('AMENT_PREFIX_PATH', '/opt/ros/humble'), ('MAKE_TERMOUT', '/dev/pts/0'), ('CXX', '/usr/bin/clang++-18'), ('LC_ALL', 'C.UTF-8'), ('PWD', '/workspace/build/cmd_vel_control'), ('PYTHONPATH', '/opt/ros/humble/lib/python3.10/site-packages:/opt/ros/humble/local/lib/python3.10/dist-packages'), ('MFLAGS', ''), ('TZ', 'Asia/Shanghai'), ('CC', '/usr/bin/clang-18'), ('COLCON', '1'), ('CMAKE_PREFIX_PATH', '/opt/ros/humble')]), 'shell': False}
+[0.090188] (zenoh_bridge_ros2dds) JobProgress: {'identifier': 'zenoh_bridge_ros2dds', 'progress': 'cmake'}
+[0.094433] (zenoh_bridge_ros2dds) Command: {'cmd': ['/usr/bin/cmake', '/workspace/src/zenoh-plugin-ros2dds', '-DAMENT_CMAKE_SYMLINK_INSTALL=1', '-DCMAKE_INSTALL_PREFIX=/workspace/install/zenoh_bridge_ros2dds'], 'cwd': '/workspace/build/zenoh_bridge_ros2dds', 'env': OrderedDict([('HOSTNAME', 'lima-rancher-desktop'), ('LD_LIBRARY_PATH', '/opt/ros/humble/opt/rviz_ogre_vendor/lib:/opt/ros/humble/lib/x86_64-linux-gnu:/opt/ros/humble/lib'), ('SHLVL', '1'), ('TARGET', 'desktop'), ('HOME', '/root'), ('ROS_PYTHON_VERSION', '3'), ('MAKEFLAGS', ' -- TARGET=desktop'), ('MAKE_TERMERR', '/dev/pts/0'), ('ROS_DISTRO', 'humble'), ('_', '/usr/bin/make'), ('ROS_VERSION', '2'), ('TERM', 'xterm'), ('ROS_LOCALHOST_ONLY', '0'), ('PATH', '/opt/ros/humble/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'), ('MAKELEVEL', '1'), ('DISPLAY', '/private/tmp/com.apple.launchd.cVlXIVFRpv/org.xquartz:0'), ('LANG', 'C.UTF-8'), ('XAUTHORITY', '/tmp/.Xauthority'), ('LS_COLORS', 'rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=00:su=37;41:sg=30;43:ca=30;41:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.zst=01;31:*.tzst=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.wim=01;31:*.swm=01;31:*.dwm=01;31:*.esd=01;31:*.jpg=01;35:*.jpeg=01;35:*.mjpg=01;35:*.mjpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.webp=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.m4a=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.oga=00;36:*.opus=00;36:*.spx=00;36:*.xspf=00;36:'), ('MAKEOVERRIDES', '${-*-command-variables-*-}'), ('AMENT_PREFIX_PATH', '/opt/ros/humble'), ('MAKE_TERMOUT', '/dev/pts/0'), ('CXX', '/usr/bin/clang++-18'), ('LC_ALL', 'C.UTF-8'), ('PWD', '/workspace/build/zenoh_bridge_ros2dds'), ('PYTHONPATH', '/opt/ros/humble/lib/python3.10/site-packages:/opt/ros/humble/local/lib/python3.10/dist-packages'), ('MFLAGS', ''), ('TZ', 'Asia/Shanghai'), ('CC', '/usr/bin/clang-18'), ('COLCON', '1'), ('CMAKE_PREFIX_PATH', '/opt/ros/humble')]), 'shell': False}
+[0.103121] (-) TimerEvent: {}
+[0.204093] (-) TimerEvent: {}
+[0.305254] (-) TimerEvent: {}
+[0.406402] (-) TimerEvent: {}
+[0.507772] (-) TimerEvent: {}
+[0.609021] (-) TimerEvent: {}
+[0.711838] (-) TimerEvent: {}
+[0.813377] (-) TimerEvent: {}
+[0.914824] (-) TimerEvent: {}
+[1.015759] (-) TimerEvent: {}
+[1.116925] (-) TimerEvent: {}
+[1.262473] (zenoh_bridge_ros2dds) StdoutLine: {'line': b'-- The C compiler identification is Clang 18.1.8\n'}
+[1.264836] (-) TimerEvent: {}
+[1.267755] (cmd_vel_control) StdoutLine: {'line': b'-- The C compiler identification is Clang 18.1.8\n'}
+[1.365080] (-) TimerEvent: {}
+[1.475436] (-) TimerEvent: {}
+[1.581700] (-) TimerEvent: {}
+[1.683533] (-) TimerEvent: {}
+[1.784432] (-) TimerEvent: {}
+[1.885362] (-) TimerEvent: {}
+[1.986454] (-) TimerEvent: {}
+[1.995199] (cmd_vel_control) StdoutLine: {'line': b'-- The CXX compiler identification is Clang 18.1.8\n'}
+[2.008317] (zenoh_bridge_ros2dds) StdoutLine: {'line': b'-- The CXX compiler identification is Clang 18.1.8\n'}
+[2.033171] (zenoh_bridge_ros2dds) StdoutLine: {'line': b'-- Detecting C compiler ABI info\n'}
+[2.060669] (cmd_vel_control) StdoutLine: {'line': b'-- Detecting C compiler ABI info\n'}
+[2.087161] (-) TimerEvent: {}
+[2.190977] (-) TimerEvent: {}
+[2.292415] (-) TimerEvent: {}
+[2.405441] (-) TimerEvent: {}
+[2.506472] (-) TimerEvent: {}
+[2.607674] (-) TimerEvent: {}
+[2.708658] (-) TimerEvent: {}
+[2.810958] (-) TimerEvent: {}
+[2.912756] (-) TimerEvent: {}
+[3.013639] (-) TimerEvent: {}
+[3.077246] (zenoh_bridge_ros2dds) StdoutLine: {'line': b'-- Detecting C compiler ABI info - done\n'}
+[3.090885] (cmd_vel_control) StdoutLine: {'line': b'-- Detecting C compiler ABI info - done\n'}
+[3.114385] (-) TimerEvent: {}
+[3.247106] (cmd_vel_control) StdoutLine: {'line': b'-- Check for working C compiler: /usr/bin/clang-18 - skipped\n'}
+[3.253246] (-) TimerEvent: {}
+[3.253943] (cmd_vel_control) StdoutLine: {'line': b'-- Detecting C compile features\n'}
+[3.255062] (cmd_vel_control) StdoutLine: {'line': b'-- Detecting C compile features - done\n'}
+[3.256341] (zenoh_bridge_ros2dds) StdoutLine: {'line': b'-- Check for working C compiler: /usr/bin/clang-18 - skipped\n'}
+[3.424731] (-) TimerEvent: {}
+[3.426763] (zenoh_bridge_ros2dds) StdoutLine: {'line': b'-- Detecting C compile features\n'}
+[3.431605] (zenoh_bridge_ros2dds) StdoutLine: {'line': b'-- Detecting C compile features - done\n'}
+[3.453077] (cmd_vel_control) StdoutLine: {'line': b'-- Detecting CXX compiler ABI info\n'}
+[3.455273] (zenoh_bridge_ros2dds) StdoutLine: {'line': b'-- Detecting CXX compiler ABI info\n'}
+[3.525173] (-) TimerEvent: {}
+[3.626537] (-) TimerEvent: {}
+[3.730859] (-) TimerEvent: {}
+[3.835508] (-) TimerEvent: {}
+[3.936679] (-) TimerEvent: {}
+[4.045424] (-) TimerEvent: {}
+[4.155468] (-) TimerEvent: {}
+[4.256379] (-) TimerEvent: {}
+[4.357199] (-) TimerEvent: {}
+[4.465578] (-) TimerEvent: {}
+[4.475590] (cmd_vel_control) StdoutLine: {'line': b'-- Detecting CXX compiler ABI info - done\n'}
+[4.532688] (cmd_vel_control) StdoutLine: {'line': b'-- Check for working CXX compiler: /usr/bin/clang++-18 - skipped\n'}
+[4.533710] (cmd_vel_control) StdoutLine: {'line': b'-- Detecting CXX compile features\n'}
+[4.535225] (cmd_vel_control) StdoutLine: {'line': b'-- Detecting CXX compile features - done\n'}
+[4.545765] (zenoh_bridge_ros2dds) StdoutLine: {'line': b'-- Detecting CXX compiler ABI info - done\n'}
+[4.566179] (-) TimerEvent: {}
+[4.567704] (cmd_vel_control) StdoutLine: {'line': b'-- Found ament_cmake: 1.3.12 (/opt/ros/humble/share/ament_cmake/cmake)\n'}
+[4.592634] (zenoh_bridge_ros2dds) StdoutLine: {'line': b'-- Check for working CXX compiler: /usr/bin/clang++-18 - skipped\n'}
+[4.593501] (zenoh_bridge_ros2dds) StdoutLine: {'line': b'-- Detecting CXX compile features\n'}
+[4.595154] (zenoh_bridge_ros2dds) StdoutLine: {'line': b'-- Detecting CXX compile features - done\n'}
+[4.618780] (zenoh_bridge_ros2dds) StdoutLine: {'line': b'-- Found ament_cmake: 1.3.12 (/opt/ros/humble/share/ament_cmake/cmake)\n'}
+[4.666371] (-) TimerEvent: {}
+[4.767601] (-) TimerEvent: {}
+[4.868664] (-) TimerEvent: {}
+[4.969523] (-) TimerEvent: {}
+[5.070433] (-) TimerEvent: {}
+[5.176222] (-) TimerEvent: {}
+[5.277244] (-) TimerEvent: {}
+[5.385551] (-) TimerEvent: {}
+[5.486520] (-) TimerEvent: {}
+[5.597964] (-) TimerEvent: {}
+[5.676400] (cmd_vel_control) StdoutLine: {'line': b'-- Found Python3: /usr/bin/python3 (found version "3.10.12") found components: Interpreter \n'}
+[5.698437] (-) TimerEvent: {}
+[5.727611] (zenoh_bridge_ros2dds) StdoutLine: {'line': b'-- Found Python3: /usr/bin/python3 (found version "3.10.12") found components: Interpreter \n'}
+[5.799272] (-) TimerEvent: {}
+[5.901189] (-) TimerEvent: {}
+[6.002143] (-) TimerEvent: {}
+[6.027128] (cmd_vel_control) StdoutLine: {'line': b'-- Override CMake install command with custom implementation using symlinks instead of copying resources\n'}
+[6.071926] (zenoh_bridge_ros2dds) StdoutLine: {'line': b'-- Override CMake install command with custom implementation using symlinks instead of copying resources\n'}
+[6.102823] (-) TimerEvent: {}
+[6.160110] (cmd_vel_control) StderrLine: {'line': b'\x1b[31mCMake Error at CMakeLists.txt:33 (find_package):\n'}
+[6.235067] (-) TimerEvent: {}
+[6.237034] (cmd_vel_control) StderrLine: {'line': b'  By not providing "Findunitree_go.cmake" in CMAKE_MODULE_PATH this project\n'}
+[6.239995] (cmd_vel_control) StderrLine: {'line': b'  has asked CMake to find a package configuration file provided by\n'}
+[6.241470] (cmd_vel_control) StderrLine: {'line': b'  "unitree_go", but CMake did not find one.\n'}
+[6.242423] (cmd_vel_control) StderrLine: {'line': b'\n'}
+[6.243402] (cmd_vel_control) StderrLine: {'line': b'  Could not find a package configuration file provided by "unitree_go" with\n'}
+[6.245544] (cmd_vel_control) StderrLine: {'line': b'  any of the following names:\n'}
+[6.246075] (cmd_vel_control) StderrLine: {'line': b'\n'}
+[6.246543] (cmd_vel_control) StderrLine: {'line': b'    unitree_goConfig.cmake\n'}
+[6.247093] (cmd_vel_control) StderrLine: {'line': b'    unitree_go-config.cmake\n'}
+[6.247623] (cmd_vel_control) StderrLine: {'line': b'\n'}
+[6.248126] (cmd_vel_control) StderrLine: {'line': b'  Add the installation prefix of "unitree_go" to CMAKE_PREFIX_PATH or set\n'}
+[6.248623] (cmd_vel_control) StderrLine: {'line': b'  "unitree_go_DIR" to a directory containing one of the above files.  If\n'}
+[6.249106] (cmd_vel_control) StderrLine: {'line': b'  "unitree_go" provides a separate development package or SDK, be sure it has\n'}
+[6.249565] (cmd_vel_control) StderrLine: {'line': b'  been installed.\n'}
+[6.250046] (cmd_vel_control) StderrLine: {'line': b'\n'}
+[6.250653] (cmd_vel_control) StderrLine: {'line': b'\x1b[0m\n'}
+[6.251126] (cmd_vel_control) StdoutLine: {'line': b'-- Configuring incomplete, errors occurred!\n'}
+[6.251632] (cmd_vel_control) StdoutLine: {'line': b'See also "/workspace/build/cmd_vel_control/CMakeFiles/CMakeOutput.log".\n'}
+[6.256119] (cmd_vel_control) CommandEnded: {'returncode': 1}
+[6.335423] (-) TimerEvent: {}
+[6.418385] (cmd_vel_control) JobEnded: {'identifier': 'cmd_vel_control', 'rc': 1}
+[6.435845] (-) TimerEvent: {}
+[6.537316] (-) TimerEvent: {}
+[6.639005] (-) TimerEvent: {}
+[6.729044] (zenoh_bridge_ros2dds) StdoutLine: {'line': b'-- Configuring done\n'}
+[6.739965] (-) TimerEvent: {}
+[6.770705] (zenoh_bridge_ros2dds) StdoutLine: {'line': b'-- Generating done\n'}
+[6.817507] (zenoh_bridge_ros2dds) StdoutLine: {'line': b'-- Build files have been written to: /workspace/build/zenoh_bridge_ros2dds\n'}
+[6.831261] (zenoh_bridge_ros2dds) JobEnded: {'identifier': 'zenoh_bridge_ros2dds', 'rc': 'SIGINT'}
+[6.841567] (-) TimerEvent: {}
+[6.845565] (-) EventReactorShutdown: {}

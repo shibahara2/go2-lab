@@ -1,0 +1,75 @@
+[0.430s] DEBUG:colcon:Command line arguments: ['/usr/bin/colcon', 'build', '--base-paths', 'src/zenoh-plugin-ros2dds', '--symlink-install', '--packages-skip', 'turtlesim']
+[0.432s] DEBUG:colcon:Parsed command line arguments: Namespace(log_base=None, log_level=None, verb_name='build', build_base='build', install_base='install', merge_install=False, symlink_install=True, test_result_base=None, continue_on_error=False, executor='parallel', parallel_workers=4, event_handlers=None, ignore_user_meta=False, metas=['./colcon.meta'], base_paths=['src/zenoh-plugin-ros2dds'], packages_ignore=None, packages_ignore_regex=None, paths=None, packages_up_to=None, packages_up_to_regex=None, packages_above=None, packages_above_and_dependencies=None, packages_above_depth=None, packages_select_by_dep=None, packages_skip_by_dep=None, packages_skip_up_to=None, packages_select_build_failed=False, packages_skip_build_finished=False, packages_select_test_failures=False, packages_skip_test_passed=False, packages_select=None, packages_skip=['turtlesim'], packages_select_regex=None, packages_skip_regex=None, packages_start=None, packages_end=None, cmake_args=None, cmake_target=None, cmake_target_skip_unavailable=False, cmake_clean_cache=False, cmake_clean_first=False, cmake_force_configure=False, ament_cmake_args=None, catkin_cmake_args=None, catkin_skip_building_tests=False, mixin_files=None, mixin=None, verb_parser=<colcon_mixin.mixin.mixin_argument.MixinArgumentDecorator object at 0xffff880f3820>, verb_extension=<colcon_core.verb.build.BuildVerb object at 0xffff88254820>, main=<bound method BuildVerb.main of <colcon_core.verb.build.BuildVerb object at 0xffff88254820>>, mixin_verb=('build',))
+[0.922s] Level 1:colcon.colcon_core.package_discovery:discover_packages(colcon_meta) check parameters
+[0.925s] INFO:colcon.colcon_metadata.package_discovery.colcon_meta:Using configuration from '/root/.colcon/metadata/default/Gazebo.meta'
+[0.927s] INFO:colcon.colcon_metadata.package_discovery.colcon_meta:Using configuration from '/root/.colcon/metadata/default/fastdds.meta'
+[0.929s] INFO:colcon.colcon_metadata.package_discovery.colcon_meta:Using configuration from '/root/.colcon/metadata/default/fastrtps.meta'
+[0.929s] Level 1:colcon.colcon_core.package_discovery:discover_packages(recursive) check parameters
+[0.929s] Level 1:colcon.colcon_core.package_discovery:discover_packages(ignore) check parameters
+[0.929s] Level 1:colcon.colcon_core.package_discovery:discover_packages(path) check parameters
+[0.929s] Level 1:colcon.colcon_core.package_discovery:discover_packages(recursive) discover
+[0.930s] INFO:colcon.colcon_core.package_discovery:Crawling recursively for packages in '/workspace/src/zenoh-plugin-ros2dds'
+[0.931s] Level 1:colcon.colcon_core.package_identification:_identify(src/zenoh-plugin-ros2dds) by extensions ['ignore', 'ignore_ament_install']
+[0.932s] Level 1:colcon.colcon_core.package_identification:_identify(src/zenoh-plugin-ros2dds) by extension 'ignore'
+[0.932s] Level 1:colcon.colcon_core.package_identification:_identify(src/zenoh-plugin-ros2dds) by extension 'ignore_ament_install'
+[0.932s] Level 1:colcon.colcon_core.package_identification:_identify(src/zenoh-plugin-ros2dds) by extensions ['colcon_pkg']
+[0.932s] Level 1:colcon.colcon_core.package_identification:_identify(src/zenoh-plugin-ros2dds) by extension 'colcon_pkg'
+[0.933s] Level 1:colcon.colcon_core.package_identification:_identify(src/zenoh-plugin-ros2dds) by extensions ['colcon_meta']
+[0.933s] Level 1:colcon.colcon_core.package_identification:_identify(src/zenoh-plugin-ros2dds) by extension 'colcon_meta'
+[0.933s] Level 1:colcon.colcon_core.package_identification:_identify(src/zenoh-plugin-ros2dds) by extensions ['ros']
+[0.933s] Level 1:colcon.colcon_core.package_identification:_identify(src/zenoh-plugin-ros2dds) by extension 'ros'
+[0.990s] DEBUG:colcon.colcon_core.package_identification:Package 'src/zenoh-plugin-ros2dds' with type 'ros.ament_cmake' and name 'zenoh_bridge_ros2dds'
+[0.990s] Level 1:colcon.colcon_core.package_discovery:discover_packages(recursive) using defaults
+[0.991s] WARNING:colcon.colcon_core.package_selection:ignoring unknown package 'turtlesim' in --packages-skip
+[1.054s] Level 5:colcon.colcon_core.verb:set package 'zenoh_bridge_ros2dds' build argument 'cmake_args' from command line to 'None'
+[1.055s] Level 5:colcon.colcon_core.verb:set package 'zenoh_bridge_ros2dds' build argument 'cmake_target' from command line to 'None'
+[1.055s] Level 5:colcon.colcon_core.verb:set package 'zenoh_bridge_ros2dds' build argument 'cmake_target_skip_unavailable' from command line to 'False'
+[1.055s] Level 5:colcon.colcon_core.verb:set package 'zenoh_bridge_ros2dds' build argument 'cmake_clean_cache' from command line to 'False'
+[1.055s] Level 5:colcon.colcon_core.verb:set package 'zenoh_bridge_ros2dds' build argument 'cmake_clean_first' from command line to 'False'
+[1.055s] Level 5:colcon.colcon_core.verb:set package 'zenoh_bridge_ros2dds' build argument 'cmake_force_configure' from command line to 'False'
+[1.056s] Level 5:colcon.colcon_core.verb:set package 'zenoh_bridge_ros2dds' build argument 'ament_cmake_args' from command line to 'None'
+[1.056s] Level 5:colcon.colcon_core.verb:set package 'zenoh_bridge_ros2dds' build argument 'catkin_cmake_args' from command line to 'None'
+[1.056s] Level 5:colcon.colcon_core.verb:set package 'zenoh_bridge_ros2dds' build argument 'catkin_skip_building_tests' from command line to 'False'
+[1.056s] DEBUG:colcon.colcon_core.verb:Building package 'zenoh_bridge_ros2dds' with the following arguments: {'ament_cmake_args': None, 'build_base': '/workspace/build/zenoh_bridge_ros2dds', 'catkin_cmake_args': None, 'catkin_skip_building_tests': False, 'cmake_args': None, 'cmake_clean_cache': False, 'cmake_clean_first': False, 'cmake_force_configure': False, 'cmake_target': None, 'cmake_target_skip_unavailable': False, 'install_base': '/workspace/install/zenoh_bridge_ros2dds', 'merge_install': False, 'path': '/workspace/src/zenoh-plugin-ros2dds', 'symlink_install': True, 'test_result_base': None}
+[1.057s] INFO:colcon.colcon_core.executor:Executing jobs using 'parallel' executor
+[1.062s] DEBUG:colcon.colcon_parallel_executor.executor.parallel:run_until_complete
+[1.066s] INFO:colcon.colcon_ros.task.ament_cmake.build:Building ROS package in '/workspace/src/zenoh-plugin-ros2dds' with build type 'ament_cmake'
+[1.066s] INFO:colcon.colcon_cmake.task.cmake.build:Building CMake package in '/workspace/src/zenoh-plugin-ros2dds'
+[1.072s] INFO:colcon.colcon_core.plugin_system:Skipping extension 'colcon_core.shell.bat': Not used on non-Windows systems
+[1.073s] INFO:colcon.colcon_core.shell:Skip shell extension 'powershell' for command environment: Not usable outside of PowerShell
+[1.073s] DEBUG:colcon.colcon_core.shell:Skip shell extension 'dsv' for command environment
+[1.174s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoking command in '/workspace/build/zenoh_bridge_ros2dds': CMAKE_PREFIX_PATH=/opt/ros/humble /usr/bin/cmake --build /workspace/build/zenoh_bridge_ros2dds -- -j4 -l4
+[1.708s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoked command in '/workspace/build/zenoh_bridge_ros2dds' returned '2': CMAKE_PREFIX_PATH=/opt/ros/humble /usr/bin/cmake --build /workspace/build/zenoh_bridge_ros2dds -- -j4 -l4
+[1.734s] Level 1:colcon.colcon_core.environment:create_environment_scripts_only(zenoh_bridge_ros2dds)
+[1.741s] Level 1:colcon.colcon_core.environment:checking '/workspace/install/zenoh_bridge_ros2dds' for CMake module files
+[1.743s] Level 1:colcon.colcon_core.environment:checking '/workspace/install/zenoh_bridge_ros2dds' for CMake config files
+[1.745s] Level 1:colcon.colcon_core.environment:checking '/workspace/install/zenoh_bridge_ros2dds/bin'
+[1.745s] Level 1:colcon.colcon_core.environment:checking '/workspace/install/zenoh_bridge_ros2dds/lib/pkgconfig/zenoh_bridge_ros2dds.pc'
+[1.751s] Level 1:colcon.colcon_core.environment:checking '/workspace/install/zenoh_bridge_ros2dds/lib/python3.10/site-packages'
+[1.753s] Level 1:colcon.colcon_core.environment:checking '/workspace/install/zenoh_bridge_ros2dds/bin'
+[1.754s] INFO:colcon.colcon_core.shell:Creating package script '/workspace/install/zenoh_bridge_ros2dds/share/zenoh_bridge_ros2dds/package.ps1'
+[1.784s] INFO:colcon.colcon_core.shell:Creating package descriptor '/workspace/install/zenoh_bridge_ros2dds/share/zenoh_bridge_ros2dds/package.dsv'
+[1.787s] INFO:colcon.colcon_core.shell:Creating package script '/workspace/install/zenoh_bridge_ros2dds/share/zenoh_bridge_ros2dds/package.sh'
+[1.790s] INFO:colcon.colcon_core.shell:Creating package script '/workspace/install/zenoh_bridge_ros2dds/share/zenoh_bridge_ros2dds/package.bash'
+[1.794s] INFO:colcon.colcon_core.shell:Creating package script '/workspace/install/zenoh_bridge_ros2dds/share/zenoh_bridge_ros2dds/package.zsh'
+[1.798s] Level 1:colcon.colcon_core.environment:create_file_with_runtime_dependencies(/workspace/install/zenoh_bridge_ros2dds/share/colcon-core/packages/zenoh_bridge_ros2dds)
+[1.812s] DEBUG:colcon.colcon_parallel_executor.executor.parallel:closing loop
+[1.813s] DEBUG:colcon.colcon_parallel_executor.executor.parallel:loop closed
+[1.813s] DEBUG:colcon.colcon_parallel_executor.executor.parallel:run_until_complete finished with '2'
+[1.814s] DEBUG:colcon.colcon_core.event_reactor:joining thread
+[1.836s] INFO:colcon.colcon_core.plugin_system:Skipping extension 'colcon_notification.desktop_notification.notify_send': Could not find 'notify-send'
+[1.837s] INFO:colcon.colcon_core.plugin_system:Skipping extension 'colcon_notification.desktop_notification.terminal_notifier': Not used on non-Darwin systems
+[1.837s] INFO:colcon.colcon_core.plugin_system:Skipping extension 'colcon_notification.desktop_notification.win32': Not used on non-Windows systems
+[1.837s] INFO:colcon.colcon_notification.desktop_notification:Sending desktop notification using 'notify2'
+[1.843s] DEBUG:colcon.colcon_notification.desktop_notification.notify2:Failed to initialize notify2: org.freedesktop.DBus.Error.Spawn.ExecFailed: /usr/bin/dbus-launch terminated abnormally without any error message
+[1.843s] DEBUG:colcon.colcon_core.event_reactor:joined thread
+[1.844s] INFO:colcon.colcon_core.shell:Creating prefix script '/workspace/install/local_setup.ps1'
+[1.853s] INFO:colcon.colcon_core.shell:Creating prefix util module '/workspace/install/_local_setup_util_ps1.py'
+[1.863s] INFO:colcon.colcon_core.shell:Creating prefix chain script '/workspace/install/setup.ps1'
+[1.886s] INFO:colcon.colcon_core.shell:Creating prefix script '/workspace/install/local_setup.sh'
+[1.891s] INFO:colcon.colcon_core.shell:Creating prefix util module '/workspace/install/_local_setup_util_sh.py'
+[1.897s] INFO:colcon.colcon_core.shell:Creating prefix chain script '/workspace/install/setup.sh'
+[1.903s] INFO:colcon.colcon_core.shell:Creating prefix script '/workspace/install/local_setup.bash'
+[1.908s] INFO:colcon.colcon_core.shell:Creating prefix chain script '/workspace/install/setup.bash'
+[1.913s] INFO:colcon.colcon_core.shell:Creating prefix script '/workspace/install/local_setup.zsh'
+[1.918s] INFO:colcon.colcon_core.shell:Creating prefix chain script '/workspace/install/setup.zsh'

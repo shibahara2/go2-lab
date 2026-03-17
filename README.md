@@ -68,6 +68,8 @@ cp configs/livox/MID360_config.json src/ros/livox_ros_driver2/config/MID360_conf
 
 デプロイ先ごとに `TARGET` を切り替えます。
 
+### 4.1 コンテナ作成
+
 ```bash
 cd /home/unitree/go2-lab
 
@@ -99,17 +101,27 @@ make src-list TARGET=jetson
 make src-stage TARGET=jetson STAGE_DIR=.staging/jetson
 ```
 
-コンテナ内:
+### 4.2 コンテナ内ビルド
+
+コンテナ作成後、ROS パッケージのビルドと `zenoh-plugin-ros2dds` のビルドを順に実行します。
+`zenoh` は `colcon build` とは別に Rust ワークスペースとしてビルドが必要です。
 
 ```bash
 source /opt/ros/humble/setup.bash
 cd /workspace
 rm -rf build install log
-make target-build TARGET=jetson
+make colcon-build TARGET=jetson
+make zenoh-build TARGET=jetson
 # desktop 側なら:
-# make target-build TARGET=desktop
+# make colcon-build TARGET=desktop
+# make zenoh-build TARGET=desktop
 source install/setup.bash
 ```
+
+- `make colcon-build TARGET=<target>` は、対象ターゲットの ROS パッケージを `colcon build` します。
+- `make zenoh-build TARGET=<target>` は、`zenoh-plugin-ros2dds` の Rust ワークスペースを `cargo build --release` します。
+- `make zenoh-build` により、`zenoh-config-*.json` が参照する `src/zenoh-plugin-ros2dds/target/release/libzenoh_plugin_ros2dds.so` が生成されます。
+- `make target-build TARGET=<target>` は、上記 2 手順をまとめて実行する補助コマンドです。
 
 ## 5. 環境変数 (Jetson/可視化PC 共通)
 

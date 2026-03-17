@@ -1,0 +1,4 @@
+source;share/zenoh_bridge_ros2dds/local_setup.bash
+source;share/zenoh_bridge_ros2dds/local_setup.dsv
+source;share/zenoh_bridge_ros2dds/local_setup.sh
+source;share/zenoh_bridge_ros2dds/local_setup.zsh

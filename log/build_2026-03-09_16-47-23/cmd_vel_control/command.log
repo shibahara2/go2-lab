@@ -1,0 +1,2 @@
+Invoking command in '/workspace/build/cmd_vel_control': CMAKE_PREFIX_PATH=/opt/ros/humble /usr/bin/cmake /workspace/src/ros/cmd_vel_control -DAMENT_CMAKE_SYMLINK_INSTALL=1 -DCMAKE_INSTALL_PREFIX=/workspace/install/cmd_vel_control
+Invoked command in '/workspace/build/cmd_vel_control' returned '1': CMAKE_PREFIX_PATH=/opt/ros/humble /usr/bin/cmake /workspace/src/ros/cmd_vel_control -DAMENT_CMAKE_SYMLINK_INSTALL=1 -DCMAKE_INSTALL_PREFIX=/workspace/install/cmd_vel_control

@@ -1,0 +1,1 @@
+Invoking command in '/workspace/build/zenoh_bridge_ros2dds': CMAKE_PREFIX_PATH=/opt/ros/humble /usr/bin/cmake /workspace/src/zenoh-plugin-ros2dds -DAMENT_CMAKE_SYMLINK_INSTALL=1 -DCMAKE_INSTALL_PREFIX=/workspace/install/zenoh_bridge_ros2dds
