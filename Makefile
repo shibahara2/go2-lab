@@ -2,15 +2,17 @@ TARGET ?= jetson
 DOCKER_COMPOSE = docker compose -f docker/docker-compose.yml
 LIST_TARGET_SRC = ./scripts/list_target_src.sh
 STAGE_DIR ?= .staging/$(TARGET)
+ROS_SRC_PREFIX = src/ros/
+ZENOH_BUILD_ROOTS = src/zenoh src/zenoh-plugin-ros2dds
 
 ifeq ($(TARGET),jetson)
 PROFILE = jetson
-SERVICES = fast-lio-ros2
-PRIMARY_SERVICE = fast-lio-ros2
+SERVICES = jetson
+PRIMARY_SERVICE = jetson
 else ifeq ($(TARGET),desktop)
 PROFILE = desktop
-SERVICES = unitree_ros2-azure
-PRIMARY_SERVICE = unitree_ros2-azure
+SERVICES = desktop
+PRIMARY_SERVICE = desktop
 else
 PROFILE =
 SERVICES =
@@ -27,8 +29,8 @@ help:
 	@echo "  make shell TARGET=jetson   # enter primary container"
 	@echo "  make src-list TARGET=jetson # list src paths for target"
 	@echo "  make src-stage TARGET=jetson STAGE_DIR=.staging/jetson"
-	@echo "  make colcon-build TARGET=desktop # build only target-classified ROS paths"
-	@echo "  make zenoh-build TARGET=desktop  # build target-classified Rust workspaces"
+	@echo "  make colcon-build TARGET=desktop # build ROS packages under $(ROS_SRC_PREFIX) only"
+	@echo "  make zenoh-build TARGET=desktop  # build $(ZENOH_BUILD_ROOTS)"
 	@echo "  make target-build TARGET=desktop # build ROS + Rust with one command"
 	@echo "  # add future targets via configs/deploy/src-<target>.txt"
 
@@ -77,26 +79,30 @@ src-stage:
 colcon-build:
 	@set -e; \
 	paths="$$( $(LIST_TARGET_SRC) $(TARGET) | while IFS= read -r p; do \
+		case "$$p" in $(ROS_SRC_PREFIX)*) ;; *) continue ;; esac; \
 		if [ -f "$$p/package.xml" ] || [ -f "$$p/package_ROS2.xml" ]; then \
 			printf '%s ' "$$p"; \
 		fi; \
 	done )"; \
 	if [ -z "$$paths" ]; then \
-		echo "No ROS package paths found for TARGET=$(TARGET); skipping colcon build."; \
+		echo "No $(ROS_SRC_PREFIX) package paths found for TARGET=$(TARGET); skipping colcon build."; \
 		exit 0; \
 	fi; \
-	echo "colcon base paths:$$paths"; \
+	echo "colcon base paths ($(ROS_SRC_PREFIX) only):$$paths"; \
 	colcon build --base-paths $$paths --symlink-install --packages-skip turtlesim
 
 zenoh-build:
 	@set -e; \
 	paths="$$( $(LIST_TARGET_SRC) $(TARGET) | while IFS= read -r p; do \
-		if [ -f "$$p/Cargo.toml" ]; then \
-			printf '%s\n' "$$p"; \
-		fi; \
+		for root in $(ZENOH_BUILD_ROOTS); do \
+			if [ "$$p" = "$$root" ] && [ -f "$$p/Cargo.toml" ]; then \
+				printf '%s\n' "$$p"; \
+				break; \
+			fi; \
+		done; \
 	done )"; \
 	if [ -z "$$paths" ]; then \
-		echo "No Rust workspace paths found for TARGET=$(TARGET); skipping cargo build."; \
+		echo "No zenoh Rust workspace paths ($(ZENOH_BUILD_ROOTS)) found for TARGET=$(TARGET); skipping cargo build."; \
 		exit 0; \
 	fi; \
 	echo "$$paths" | while IFS= read -r p; do \

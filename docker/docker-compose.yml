@@ -1,38 +1,5 @@
 services: 
-  unitree_ros2-jetson:
-    profiles: ["jetson"]
-    platform: linux/arm64
-    volumes: 
-      - ..:/workspace:cached
-      - /tmp/.X11-unix:/tmp/.X11-unix:rw
-      - /mnt/wslg:/mnt/wslg
-      - /root/.gazebo/models/:/root/.gazebo/models/
-      - /var/run/docker.sock:/var/run/docker.sock 
-      - $HOME/.Xauthority:/tmp/.Xauthority:rw
-    environment:
-      - DISPLAY=${DISPLAY}
-      - XAUTHORITY=/tmp/.Xauthority
-      - NVIDIA_DRIVER_CAPABILITIES=all
-      - NVIDIA_VISIBLE_DEVICES=all
-
-    cap_add:
-      - SYS_PTRACE  
-    command: /bin/sh -c "while sleep 1000; do :; done"
- 
-    build:
-      context: .
-      dockerfile: Dockerfile.jetson
-    image: unitree_ros2:jetson
-    container_name: unitree_ros2-jetson
-    
-    # run `cd .devcontainer/ && docker build . -t ros2-humble-dev:latest -f Dockerfile-humble` 
-    # to use the development environment, or you can build it with Dockerfile.
-    # Perhaps Unitree will provide a dockerhub image later to save you time compiling.
-    privileged: true
-    runtime: nvidia
-    network_mode: "host"
-
-  unitree_ros2-azure:
+  desktop:
     profiles: ["desktop"]
     platform: linux/amd64
     volumes:
@@ -53,23 +20,23 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.azure
-    image: unitree_ros2:azure
-    container_name: unitree_ros2-azure
+    image: go2-lab:desktop
+    container_name: desktop
 
     # run `cd .devcontainer/ && docker build . -t ros2-humble-dev:latest -f Dockerfile-humble`
     # to use the development environment, or you can build it with Dockerfile.
     # Perhaps Unitree will provide a dockerhub image later to save you time compiling.
     privileged: true
     network_mode: "host"
-  fast-lio-ros2:
+  jetson:
     profiles: ["jetson"]
     platform: linux/arm64
     build:
       context: .
       dockerfile: Dockerfile.slam
       network: host
-    image: fast-lio-ros2
-    container_name: fast-lio-ros2
+    image: go2-lab:jetson
+    container_name: jetson
     stdin_open: true
     tty: true
 

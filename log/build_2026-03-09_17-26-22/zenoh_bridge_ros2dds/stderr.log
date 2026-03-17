@@ -1,4 +1,0 @@
-gmake[3]: cargo: No such file or directory
-gmake[3]: *** [CMakeFiles/build_crate.dir/build.make:98: target/release/zenoh-bridge-ros2dds] Error 127
-gmake[2]: *** [CMakeFiles/Makefile2:137: CMakeFiles/build_crate.dir/all] Error 2
-gmake[1]: *** [Makefile:146: all] Error 2

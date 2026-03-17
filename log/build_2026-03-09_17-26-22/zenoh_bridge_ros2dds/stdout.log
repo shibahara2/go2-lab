@@ -1,9 +1,0 @@
-gmake[1]: Entering directory '/workspace/build/zenoh_bridge_ros2dds'
-gmake[2]: Entering directory '/workspace/build/zenoh_bridge_ros2dds'
-gmake[3]: Entering directory '/workspace/build/zenoh_bridge_ros2dds'
-gmake[3]: Leaving directory '/workspace/build/zenoh_bridge_ros2dds'
-gmake[3]: Entering directory '/workspace/build/zenoh_bridge_ros2dds'
-[100%] [34m[1mGenerating target/release/zenoh-bridge-ros2dds[0m
-gmake[3]: Leaving directory '/workspace/build/zenoh_bridge_ros2dds'
-gmake[2]: Leaving directory '/workspace/build/zenoh_bridge_ros2dds'
-gmake[1]: Leaving directory '/workspace/build/zenoh_bridge_ros2dds'

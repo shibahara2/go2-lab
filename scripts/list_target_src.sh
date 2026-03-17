@@ -27,6 +27,11 @@ parse_file() {
     trimmed="$(echo "${line}" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
     [[ -z "${trimmed}" ]] && continue
     [[ "${trimmed}" =~ ^# ]] && continue
+    path="${repo_root}/${trimmed}"
+    if [[ ! -e "${path}" ]]; then
+      echo "Configured path not found: ${trimmed} (from ${file})" >&2
+      exit 1
+    fi
     printf '%s\n' "${trimmed}"
   done < "${file}"
 }
