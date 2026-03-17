@@ -80,12 +80,10 @@ colcon-build:
 	@set -e; \
 	paths="$$( $(LIST_TARGET_SRC) $(TARGET) | while IFS= read -r p; do \
 		case "$$p" in $(ROS_SRC_PREFIX)*) ;; *) continue ;; esac; \
-		if [ -f "$$p/package.xml" ] || [ -f "$$p/package_ROS2.xml" ]; then \
-			printf '%s ' "$$p"; \
-		fi; \
+		printf '%s ' "$$p"; \
 	done )"; \
 	if [ -z "$$paths" ]; then \
-		echo "No $(ROS_SRC_PREFIX) package paths found for TARGET=$(TARGET); skipping colcon build."; \
+		echo "No $(ROS_SRC_PREFIX) search roots found for TARGET=$(TARGET); skipping colcon build."; \
 		exit 0; \
 	fi; \
 	echo "colcon base paths ($(ROS_SRC_PREFIX) only):$$paths"; \

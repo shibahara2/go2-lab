@@ -15,6 +15,7 @@ RUN apt update -q && \
     apt-get update -q && \
     apt-get install -y ros-${ROS_DISTRO}-${INSTALL_PACKAGE} \
     python3-argcomplete \
+    python3-ament-package \
     python3-colcon-common-extensions \
     python3-rosdep python3-vcstool
 

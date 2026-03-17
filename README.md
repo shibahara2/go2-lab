@@ -121,7 +121,7 @@ make zenoh-build TARGET=jetson
 source install/setup.bash
 ```
 
-- `make colcon-build TARGET=<target>` は、対象ターゲットのうち `src/ros` 配下にある ROS パッケージだけを `colcon build` します。
+- `make colcon-build TARGET=<target>` は、対象ターゲットのうち `src/ros` 配下にある search root を `colcon build --base-paths` に渡し、その配下の ROS パッケージを再帰的に探索してビルドします。
 - `make zenoh-build TARGET=<target>` は、`src/zenoh` と `src/zenoh-plugin-ros2dds` の Rust ワークスペースを `cargo build --release` します。
 - `make zenoh-build` により、`zenoh-config-*.json` が参照する `src/zenoh-plugin-ros2dds/target/release/libzenoh_plugin_ros2dds.so` が生成されます。
 - `configs/deploy/src-*.txt` は配布対象の一覧であり、実際のビルド対象は各コマンドで必要なパス種別に絞り込みます。
