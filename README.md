@@ -75,7 +75,7 @@ make shell TARGET=desktop
 
 起動時に、実際に `source` できたパスを `[auto-source] sourced: ...` として表示します。
 未生成のファイルは `[auto-source] missing: ...` と表示されます。
-配備対象の確認やステージングが必要な場合は、後述の `10.1 確認/ステージング` を参照してください。
+配備対象の確認やステージングが必要な場合は、後述の `9.1 確認/ステージング` を参照してください。
 
 ## 5. パッケージビルド
 
@@ -92,71 +92,31 @@ make target-build TARGET=<target>
 - `make target-build TARGET=<target>` は、`make colcon-build`と`make zenoh-build`を一度に行います。
 - `make colcon-build TARGET=<target>` は、対象ターゲットのうち `src/ros` 配下にある search root を `colcon build --base-paths` に渡し、その配下の ROS パッケージを再帰的に探索してビルドします。
 - `make zenoh-build TARGET=<target>` は、`src/zenoh` と `src/zenoh-plugin-ros2dds` の Rust ワークスペースを `cargo build --release` します。
+</details>
 
-## 6. 環境変数
+## 6. 起動順
 
-`make up TARGET=<target>` で起動するコンテナには、以下の ROS 環境変数を `docker/docker-compose.yml` から自動で注入します。
-`make shell TARGET=<target>` で入ったシェルでも、そのまま有効です。
-
-Jetson:
-
-```bash
-RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
-ROS_DOMAIN_ID=0
-```
-
-desktop:
-
-```bash
-RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
-ROS_LOCALHOST_ONLY=1
-ROS_DOMAIN_ID=0
-```
-
-- `ROS_DOMAIN_ID` は Jetson と可視化PCで必ず同じ値にします。
-- Jetson は Go2 実機と DDS discovery するため `ROS_LOCALHOST_ONLY` を設定しません。
-- desktop は zenoh router 側のローカル ROS グラフを閉じるため `ROS_LOCALHOST_ONLY=1` のままです。
-- 毎ターミナルで `export` する必要はありません。
-
-`ROS_DOMAIN_ID` を変更したい場合は、リポジトリ直下で `.env` を作るか、起動時に一時上書きします。
-
-```bash
-cp .env.example .env
-# 必要なら ROS_DOMAIN_ID を変更
-```
-
-```bash
-ROS_DOMAIN_ID=5 make up TARGET=jetson
-ROS_DOMAIN_ID=5 make up TARGET=desktop
-```
-
-現在の値はコンテナ内で確認できます。
-
-```bash
-printenv RMW_IMPLEMENTATION ROS_LOCALHOST_ONLY ROS_DOMAIN_ID
-```
-
-## 7. 起動順
-
-### 7.1 可視化PC: zenoh router 起動
+### 6.1 可視化PC: zenoh router 起動
 
 ```bash
 src/zenoh/target/release/zenohd -c zenoh-config-azure.json
 ```
 
-### 7.2 Jetson: zenoh client 起動
+### 6.2 Jetson: zenoh client 起動
 
 ```bash
 src/zenoh/target/release/zenohd -c zenoh-config-jetson.json
 ```
 
-### 7.3 Jetson: Livoxドライバ起動
+Jetson 側の `ros2dds` plugin は Go2 実機の DDS を `eth0` 越しに拾うため、`zenoh-config-jetson.json` では `plugins.ros2dds.ros_localhost_only=false` にします。
+
+### 6.3 Jetson: Livoxドライバ起動
 
 ```bash
 ros2 launch livox_ros_driver2 msg_MID360_launch.py
 ```
 
-### 7.4 Jetson: FAST-LIO(ROS2) 起動 (Go2側でRVizは起動しない)
+### 6.4 Jetson: FAST-LIO(ROS2) 起動 (Go2側でRVizは起動しない)
 
 別ターミナルでも `make shell TARGET=jetson` で同じ環境を読み込み:
 
@@ -164,7 +124,7 @@ ros2 launch livox_ros_driver2 msg_MID360_launch.py
 ros2 launch fast_lio mapping.launch.py config_file:=mid360.yaml rviz:=false
 ```
 
-### 7.6 可視化PC: トピック確認後に RViz2 起動
+### 6.6 可視化PC: トピック確認後に RViz2 起動
 
 ```bash
 ros2 topic list
@@ -180,7 +140,7 @@ RVizの目安:
   - `/tf`
   - `/tf_static`
 
-## 8. 疎通/動作確認
+## 7. 疎通/動作確認
 
 ### Jetson単体
 
@@ -204,19 +164,19 @@ ros2 topic echo /Odometry --once
 - 点群とオドメトリが連続更新されること
 - 5分以上連続で途切れないこと
 
-## 9. zenoh 設定ファイル
+## 8. zenoh 設定ファイル
 
 - Jetson(client): `zenoh-config-jetson.json`
   - `connect.endpoints`: `tcp/135.149.56.251:7447`
   - `plugins.ros2dds.domain`: `0`
-  - `plugins.ros2dds.ros_localhost_only`: `true`
+  - `plugins.ros2dds.ros_localhost_only`: `false`
 
 - 可視化PC(router): `zenoh-config-azure.json`
   - `listen.endpoints`: `tcp/0.0.0.0:7447`
   - `plugins.ros2dds.domain`: `0`
   - `plugins.ros2dds.ros_localhost_only`: `true`
 
-## 10. 構成を変更した場合
+## 9. 構成を変更した場合
 
 `make sync-configs` は初回セットアップではコンテナ作成前に実行します。
 それ以降は、`configs/` 配下の設定を変更したときだけ再実行してください。
@@ -234,7 +194,7 @@ ros2 topic echo /Odometry --once
 make sync-configs
 ```
 
-### 10.1 確認/ステージング
+### 9.1 確認/ステージング
 
 `src` 配下のデプロイ対象は以下のファイルで管理します。
 - 共通: `configs/deploy/src-common.txt`
@@ -254,7 +214,32 @@ make src-stage TARGET=jetson STAGE_DIR=.staging/jetson
 （Docker コンテナ実行が必要なら `Makefile` に `PROFILE/SERVICES` の対応を追加）
 列挙したパスがリポジトリ内に存在しない場合、`make src-list` / `make colcon-build` / `make target-build` は設定エラーとして即座に失敗します。
 
-## 11. トラブルシュート
+### 9.2 環境変数メモ（調査中）
+
+この節の内容は現行構成の調査メモです。運用ルールとして確定していないため、必要に応じて実機設定と `docker/docker-compose.yml` を再確認してください。
+
+- `make up TARGET=<target>` で起動するコンテナには `docker/docker-compose.yml` から環境変数が注入されます。
+- `RMW_IMPLEMENTATION=rmw_cyclonedds_cpp` は Jetson / desktop の両方で設定されています。
+- `ROS_DOMAIN_ID` は Jetson と可視化PCで同じ値を使います。変更したい場合は `.env` を作るか、起動時に一時上書きします。
+- `ROS_LOCALHOST_ONLY=1` は desktop 側で設定され、Jetson 側では設定していません。
+
+```bash
+cp .env.example .env
+# 必要なら ROS_DOMAIN_ID を変更
+```
+
+```bash
+ROS_DOMAIN_ID=5 make up TARGET=jetson
+ROS_DOMAIN_ID=5 make up TARGET=desktop
+```
+
+現在の値はコンテナ内で確認できます。
+
+```bash
+printenv RMW_IMPLEMENTATION ROS_LOCALHOST_ONLY ROS_DOMAIN_ID
+```
+
+## 10. トラブルシュート
 
 - `ros2 topic list` が空:
   - Jetson/可視化PCの `ROS_DOMAIN_ID` 不一致を確認

@@ -4,7 +4,7 @@
         ros2dds: {
             __path__: "src/zenoh-plugin-ros2dds/target/release/libzenoh_plugin_ros2dds.so",
             domain: 0,
-            ros_localhost_only: true,
+            ros_localhost_only: false,
         }
     },
     connect: {
