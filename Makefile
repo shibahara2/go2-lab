@@ -59,7 +59,7 @@ logs: require-docker-target
 	$(DOCKER_COMPOSE) --profile $(PROFILE) logs -f $(SERVICES)
 
 shell: require-docker-target
-	$(DOCKER_COMPOSE) exec $(PRIMARY_SERVICE) bash -lc 'cd /workspace; \
+	@$(DOCKER_COMPOSE) exec $(PRIMARY_SERVICE) bash -lc 'cd /workspace; \
 		if [ -f /workspace/src/ros/unitree_ros2/setup.sh ]; then \
 			source /workspace/src/ros/unitree_ros2/setup.sh; \
 			echo "[auto-source] sourced: /workspace/src/ros/unitree_ros2/setup.sh"; \
@@ -105,7 +105,7 @@ colcon-build:
 		exit 0; \
 	fi; \
 	echo "colcon base paths ($(ROS_SRC_PREFIX) only):$$paths"; \
-	colcon build --base-paths $$paths --symlink-install --packages-skip turtlesim
+	colcon build --base-paths $$paths --symlink-install
 
 zenoh-build:
 	@set -e; \
