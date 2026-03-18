@@ -2,19 +2,13 @@
 set -euo pipefail
 
 if [[ $# -ne 1 ]]; then
-  echo "Usage: $0 <jetson|desktop>" >&2
+  echo "Usage: $0 <target>" >&2
   exit 1
 fi
 
 target="$1"
 repo_root="$(cd "$(dirname "$0")/.." && pwd)"
-common_file="${repo_root}/configs/deploy/src-common.txt"
 target_file="${repo_root}/configs/deploy/src-${target}.txt"
-
-if [[ ! -f "${common_file}" ]]; then
-  echo "Config not found: ${common_file}" >&2
-  exit 1
-fi
 
 if [[ ! -f "${target_file}" ]]; then
   echo "Config not found: ${target_file}" >&2
@@ -36,7 +30,4 @@ parse_file() {
   done < "${file}"
 }
 
-{
-  parse_file "${common_file}"
-  parse_file "${target_file}"
-} | awk '!seen[$0]++'
+parse_file "${target_file}"

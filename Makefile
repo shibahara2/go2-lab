@@ -10,10 +10,10 @@ ifeq ($(TARGET),jetson)
 PROFILE = jetson
 SERVICES = jetson
 PRIMARY_SERVICE = jetson
-else ifeq ($(TARGET),desktop)
-PROFILE = desktop
-SERVICES = desktop
-PRIMARY_SERVICE = desktop
+else ifeq ($(TARGET),bridge)
+PROFILE = bridge
+SERVICES = bridge
+PRIMARY_SERVICE = bridge
 else
 PROFILE =
 SERVICES =
@@ -25,15 +25,15 @@ endif
 help:
 	@echo "Usage:"
 	@echo "  make build TARGET=jetson   # build Jetson services"
-	@echo "  make build TARGET=desktop  # build desktop services"
+	@echo "  make build TARGET=bridge   # build bridge services"
 	@echo "  make up TARGET=jetson      # run services in background"
 	@echo "  make shell TARGET=jetson   # enter primary container"
 	@echo "  make src-list TARGET=jetson # list src paths for target"
 	@echo "  make src-stage TARGET=jetson STAGE_DIR=.staging/jetson"
 	@echo "  make sync-configs          # copy tracked config templates into src/"
-	@echo "  make colcon-build TARGET=desktop # build ROS packages under $(ROS_SRC_PREFIX) only"
-	@echo "  make zenoh-build TARGET=desktop  # build $(ZENOH_BUILD_ROOTS)"
-	@echo "  make target-build TARGET=desktop # build ROS + Rust with one command"
+	@echo "  make colcon-build TARGET=bridge # build ROS packages under $(ROS_SRC_PREFIX) only"
+	@echo "  make zenoh-build TARGET=bridge  # build $(ZENOH_BUILD_ROOTS)"
+	@echo "  make target-build TARGET=bridge # build ROS + Rust with one command"
 	@echo "  # add future targets via configs/deploy/src-<target>.txt"
 
 require-docker-target:
@@ -60,17 +60,19 @@ logs: require-docker-target
 
 shell: require-docker-target
 	@$(DOCKER_COMPOSE) exec $(PRIMARY_SERVICE) bash -lc 'cd /workspace; \
-		if [ -f /workspace/src/ros/unitree_ros2/setup.sh ]; then \
-			source /workspace/src/ros/unitree_ros2/setup.sh; \
-			echo "[auto-source] sourced: /workspace/src/ros/unitree_ros2/setup.sh"; \
-		else \
-			echo "[auto-source] missing: /workspace/src/ros/unitree_ros2/setup.sh"; \
-		fi; \
-		if [ -f /workspace/install/setup.bash ]; then \
-			source /workspace/install/setup.bash; \
-			echo "[auto-source] sourced: /workspace/install/setup.bash"; \
-		else \
-			echo "[auto-source] missing: /workspace/install/setup.bash"; \
+		if [ "$(TARGET)" = "jetson" ]; then \
+			if [ -f /workspace/src/ros/unitree_ros2/setup.sh ]; then \
+				source /workspace/src/ros/unitree_ros2/setup.sh; \
+				echo "[auto-source] sourced: /workspace/src/ros/unitree_ros2/setup.sh"; \
+			else \
+				echo "[auto-source] missing: /workspace/src/ros/unitree_ros2/setup.sh"; \
+			fi; \
+			if [ -f /workspace/install/setup.bash ]; then \
+				source /workspace/install/setup.bash; \
+				echo "[auto-source] sourced: /workspace/install/setup.bash"; \
+			else \
+				echo "[auto-source] missing: /workspace/install/setup.bash"; \
+			fi; \
 		fi; \
 		exec bash -i'
 
@@ -97,7 +99,9 @@ sync-configs:
 colcon-build:
 	@set -e; \
 	paths="$$( $(LIST_TARGET_SRC) $(TARGET) | while IFS= read -r p; do \
-		case "$$p" in $(ROS_SRC_PREFIX)*) ;; *) continue ;; esac; \
+		if [ "$${p#$(ROS_SRC_PREFIX)}" = "$$p" ]; then \
+			continue; \
+		fi; \
 		printf '%s ' "$$p"; \
 	done )"; \
 	if [ -z "$$paths" ]; then \

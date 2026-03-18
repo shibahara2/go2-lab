@@ -57,6 +57,9 @@ RUN /bin/bash -c '. /opt/ros/humble/setup.bash;'
 WORKDIR /workspace
 
 # Load ROS environment at each run
+COPY ./bashrc.shared /etc/go2-lab.bashrc
+RUN chmod 644 /etc/go2-lab.bashrc && \
+    printf '\nif [ -f /etc/go2-lab.bashrc ]; then\n  source /etc/go2-lab.bashrc\nfi\n' >> /root/.bashrc
 COPY ./ros_entrypoint.sh /
 RUN chmod 755 /ros_entrypoint.sh
 ENTRYPOINT ["/ros_entrypoint.sh"]

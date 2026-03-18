@@ -1,0 +1,3 @@
+# Paths under repository root specific to bridge only.
+src/zenoh
+src/zenoh-plugin-ros2dds

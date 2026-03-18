@@ -1,34 +1,24 @@
 services: 
-  desktop:
-    profiles: ["desktop"]
+  bridge:
+    profiles: ["bridge"]
     platform: linux/amd64
     volumes:
       - ..:/workspace:cached
-      - /tmp/.X11-unix:/tmp/.X11-unix:rw
-      - /mnt/wslg:/mnt/wslg
-      - /root/.gazebo/models/:/root/.gazebo/models/
       - /var/run/docker.sock:/var/run/docker.sock
-      - $HOME/.Xauthority:/tmp/.Xauthority:rw
     environment:
-      - DISPLAY=${DISPLAY}
-      - XAUTHORITY=/tmp/.Xauthority
       - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
       - ROS_LOCALHOST_ONLY=1
       - ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-0}
 
     cap_add:
       - SYS_PTRACE
-    command: /bin/sh -c "while sleep 1000; do :; done"
+    command: /bin/bash -lc "while sleep 1000; do :; done"
 
     build:
       context: .
-      dockerfile: Dockerfile.azure
-    image: go2-lab:desktop
-    container_name: desktop
-
-    # run `cd .devcontainer/ && docker build . -t ros2-humble-dev:latest -f Dockerfile-humble`
-    # to use the development environment, or you can build it with Dockerfile.
-    # Perhaps Unitree will provide a dockerhub image later to save you time compiling.
+      dockerfile: Dockerfile.bridge
+    image: go2-lab:bridge
+    container_name: bridge
     privileged: true
     network_mode: "host"
   jetson:
@@ -36,7 +26,7 @@ services:
     platform: linux/arm64
     build:
       context: .
-      dockerfile: Dockerfile.slam
+      dockerfile: Dockerfile.jetson
       network: host
     image: go2-lab:jetson
     container_name: jetson

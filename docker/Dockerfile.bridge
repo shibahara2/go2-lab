@@ -1,16 +1,15 @@
 FROM osrf/ros:humble-desktop-full
+SHELL ["/bin/bash", "-c"]
 
 ENV TZ=Asia/Shanghai
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 USER root
 
-# install zsh and oh-my-zsh
 RUN apt update && \
     apt install -y \
         cargo \
         clang \
         cmake \
-        curl \
         git \
         libclang-dev \
         libssl-dev \
@@ -19,19 +18,7 @@ RUN apt update && \
         software-properties-common \
         pkg-config \
         rustc \
-        wget \
-        zsh
-RUN wget https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh && chmod +x install.sh && ls
-RUN ./install.sh
-RUN git clone https://github.com/zsh-users/zsh-autosuggestions.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-autosuggestions && \
-    apt install -y zsh-syntax-highlighting
-
-# configure zsh
-RUN echo 'export ZSH=$HOME/.oh-my-zsh' >> ~/.zshrc && \
-    echo 'ZSH_THEME="ys"' >> ~/.zshrc && \
-    echo 'plugins=(git zsh-autosuggestions)' >> ~/.zshrc && \
-    echo 'source $ZSH/oh-my-zsh.sh' >> ~/.zshrc && \
-    echo 'source /usr/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh' >> ~/.zshrc
+        wget
 
 # install clang tools
 RUN wget https://apt.llvm.org/llvm.sh && chmod +x llvm.sh && ./llvm.sh 18 all
@@ -44,6 +31,8 @@ ENV CC=/usr/bin/clang-18
 ENV CXX=/usr/bin/clang++-18
 
 WORKDIR /workspace
-RUN echo "source /opt/ros/humble/setup.sh" >> ~/.zshrc
+COPY ./bashrc.shared /etc/go2-lab.bashrc
+RUN chmod 644 /etc/go2-lab.bashrc && \
+    printf '\nif [ -f /etc/go2-lab.bashrc ]; then\n  source /etc/go2-lab.bashrc\nfi\n' >> /root/.bashrc
 RUN apt update && apt install -y python3-ament-package ros-humble-rmw-cyclonedds-cpp ros-humble-rosidl-generator-dds-idl
-CMD [ "zsh" ]
+CMD ["bash"]
