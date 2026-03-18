@@ -75,24 +75,7 @@ make shell TARGET=desktop
 
 起動時に、実際に `source` できたパスを `[auto-source] sourced: ...` として表示します。
 未生成のファイルは `[auto-source] missing: ...` と表示されます。
-
-`src` 配下のデプロイ対象は以下のファイルで管理します。
-- 共通: `configs/deploy/src-common.txt`
-- Jetson固有差分: `configs/deploy/src-jetson.txt`
-- Desktop PC固有差分: `configs/deploy/src-desktop.txt`
-
-### (Optional) 確認/ステージング:
-
-```bash
-cd /home/unitree/go2-lab
-make src-list TARGET=jetson
-make src-stage TARGET=jetson STAGE_DIR=.staging/jetson
-```
-
-`make src-list TARGET=<target>` は `common + target固有差分` の合成結果を表示します。
-将来ターゲットを増やす場合は `configs/deploy/src-<new-target>.txt` を追加します。
-（Docker コンテナ実行が必要なら `Makefile` に `PROFILE/SERVICES` の対応を追加）
-列挙したパスがリポジトリ内に存在しない場合、`make src-list` / `make colcon-build` / `make target-build` は設定エラーとして即座に失敗します。
+配備対象の確認やステージングが必要な場合は、後述の `10.1 確認/ステージング` を参照してください。
 
 ## 5. パッケージビルド
 
@@ -110,10 +93,19 @@ make target-build TARGET=<target>
 - `make colcon-build TARGET=<target>` は、対象ターゲットのうち `src/ros` 配下にある search root を `colcon build --base-paths` に渡し、その配下の ROS パッケージを再帰的に探索してビルドします。
 - `make zenoh-build TARGET=<target>` は、`src/zenoh` と `src/zenoh-plugin-ros2dds` の Rust ワークスペースを `cargo build --release` します。
 
-## 6. 環境変数 (Jetson/可視化PC 共通)
+## 6. 環境変数
 
 `make up TARGET=<target>` で起動するコンテナには、以下の ROS 環境変数を `docker/docker-compose.yml` から自動で注入します。
 `make shell TARGET=<target>` で入ったシェルでも、そのまま有効です。
+
+Jetson:
+
+```bash
+RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+ROS_DOMAIN_ID=0
+```
+
+desktop:
 
 ```bash
 RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
@@ -122,7 +114,8 @@ ROS_DOMAIN_ID=0
 ```
 
 - `ROS_DOMAIN_ID` は Jetson と可視化PCで必ず同じ値にします。
-- DDSループ防止のため、`ROS_LOCALHOST_ONLY=1` を使います。
+- Jetson は Go2 実機と DDS discovery するため `ROS_LOCALHOST_ONLY` を設定しません。
+- desktop は zenoh router 側のローカル ROS グラフを閉じるため `ROS_LOCALHOST_ONLY=1` のままです。
 - 毎ターミナルで `export` する必要はありません。
 
 `ROS_DOMAIN_ID` を変更したい場合は、リポジトリ直下で `.env` を作るか、起動時に一時上書きします。
@@ -241,11 +234,31 @@ ros2 topic echo /Odometry --once
 make sync-configs
 ```
 
+### 10.1 確認/ステージング
+
+`src` 配下のデプロイ対象は以下のファイルで管理します。
+- 共通: `configs/deploy/src-common.txt`
+- Jetson固有差分: `configs/deploy/src-jetson.txt`
+- Desktop PC固有差分: `configs/deploy/src-desktop.txt`
+
+構成変更後に配備対象を確認したい場合や、配布前にステージングしたい場合は以下を実行します。
+
+```bash
+cd /home/unitree/go2-lab
+make src-list TARGET=jetson
+make src-stage TARGET=jetson STAGE_DIR=.staging/jetson
+```
+
+`make src-list TARGET=<target>` は `common + target固有差分` の合成結果を表示します。
+将来ターゲットを増やす場合は `configs/deploy/src-<new-target>.txt` を追加します。
+（Docker コンテナ実行が必要なら `Makefile` に `PROFILE/SERVICES` の対応を追加）
+列挙したパスがリポジトリ内に存在しない場合、`make src-list` / `make colcon-build` / `make target-build` は設定エラーとして即座に失敗します。
+
 ## 11. トラブルシュート
 
 - `ros2 topic list` が空:
   - Jetson/可視化PCの `ROS_DOMAIN_ID` 不一致を確認
-  - コンテナ内で `printenv RMW_IMPLEMENTATION ROS_LOCALHOST_ONLY ROS_DOMAIN_ID` を実行し、両端で同じ値が有効か確認
+  - コンテナ内で `printenv RMW_IMPLEMENTATION ROS_LOCALHOST_ONLY ROS_DOMAIN_ID` を実行し、Jetson は `ROS_LOCALHOST_ONLY` が未設定、desktop は `1` になっていることを確認
   - `zenohd` 起動ログで接続断を確認
 
 - `/livox/lidar` が出ない:
@@ -257,4 +270,5 @@ make sync-configs
   - `/cloud_registered` の QoS を確認
 
 - `unitree_ros2`トピックが見えない:
+  - Jetson コンテナで `ROS_LOCALHOST_ONLY` を設定していないことを確認
   - `ros2 daemon stop`を実行してキャッシュを削除する
