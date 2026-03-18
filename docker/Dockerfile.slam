@@ -1,19 +1,12 @@
-FROM arm64v8/ubuntu:jammy
+FROM althack/ros2:humble-full
 SHELL ["/bin/bash", "-c"]
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Author: TaeYoung Kim
 # email: tyoung96@yonsei.ac.kr
 
-ARG ROS_DISTRO=humble
-ARG INSTALL_PACKAGE=desktop
-
-RUN apt update -q && \
-    apt install -y curl gnupg2 lsb-release  && \
-    curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg && \
-    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu $(lsb_release -cs) main" | tee /etc/apt/sources.list.d/ros2.list > /dev/null && \
-    apt-get update -q && \
-    apt-get install -y ros-${ROS_DISTRO}-${INSTALL_PACKAGE} \
+RUN apt-get update -q && \
+    apt-get install -y \
     python3-argcomplete \
     python3-ament-package \
     python3-colcon-common-extensions \
@@ -38,9 +31,18 @@ RUN apt-get update && apt-get install -y \
     rustc \
     unzip \
     wget
-RUN apt-get install -y ros-humble-tf2 ros-humble-cv-bridge ros-humble-pcl-conversions ros-humble-xacro ros-humble-robot-state-publisher \
-    ros-humble-rviz2 ros-humble-image-transport ros-humble-image-transport-plugins ros-humble-pcl-ros \
-    ros-humble-rosidl-generator-dds-idl ros-humble-rmw-cyclonedds-cpp
+RUN apt-get install -y \
+    ros-humble-cv-bridge \
+    ros-humble-image-transport \
+    ros-humble-image-transport-plugins \
+    ros-humble-pcl-conversions \
+    ros-humble-pcl-ros \
+    ros-humble-rmw-cyclonedds-cpp \
+    ros-humble-robot-state-publisher \
+    ros-humble-rosidl-generator-dds-idl \
+    ros-humble-rviz2 \
+    ros-humble-tf2 \
+    ros-humble-xacro
 
 # Install livox SDK
 WORKDIR /root/

@@ -45,5 +45,5 @@ ENV CXX=/usr/bin/clang++-18
 
 WORKDIR /workspace
 RUN echo "source /opt/ros/humble/setup.sh" >> ~/.zshrc
-RUN apt update && apt install -y ros-humble-rmw-cyclonedds-cpp ros-humble-rosidl-generator-dds-idl
+RUN apt update && apt install -y python3-ament-package ros-humble-rmw-cyclonedds-cpp ros-humble-rosidl-generator-dds-idl
 CMD [ "zsh" ]
