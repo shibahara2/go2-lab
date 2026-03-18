@@ -1,6 +1,7 @@
 TARGET ?= jetson
 DOCKER_COMPOSE = docker compose -f docker/docker-compose.yml
 LIST_TARGET_SRC = ./scripts/list_target_src.sh
+SYNC_CONFIGS = ./scripts/sync_configs.sh
 STAGE_DIR ?= .staging/$(TARGET)
 ROS_SRC_PREFIX = src/ros/
 ZENOH_BUILD_ROOTS = src/zenoh src/zenoh-plugin-ros2dds
@@ -19,7 +20,7 @@ SERVICES =
 PRIMARY_SERVICE =
 endif
 
-.PHONY: help build up down ps logs shell src-list src-stage colcon-build zenoh-build target-build require-docker-target
+.PHONY: help build up down ps logs shell src-list src-stage sync-configs colcon-build zenoh-build target-build require-docker-target
 
 help:
 	@echo "Usage:"
@@ -29,6 +30,7 @@ help:
 	@echo "  make shell TARGET=jetson   # enter primary container"
 	@echo "  make src-list TARGET=jetson # list src paths for target"
 	@echo "  make src-stage TARGET=jetson STAGE_DIR=.staging/jetson"
+	@echo "  make sync-configs          # copy tracked config templates into src/"
 	@echo "  make colcon-build TARGET=desktop # build ROS packages under $(ROS_SRC_PREFIX) only"
 	@echo "  make zenoh-build TARGET=desktop  # build $(ZENOH_BUILD_ROOTS)"
 	@echo "  make target-build TARGET=desktop # build ROS + Rust with one command"
@@ -57,7 +59,20 @@ logs: require-docker-target
 	$(DOCKER_COMPOSE) --profile $(PROFILE) logs -f $(SERVICES)
 
 shell: require-docker-target
-	$(DOCKER_COMPOSE) exec $(PRIMARY_SERVICE) bash
+	$(DOCKER_COMPOSE) exec $(PRIMARY_SERVICE) bash -lc 'cd /workspace; \
+		if [ -f /workspace/src/ros/unitree_ros2/setup.sh ]; then \
+			source /workspace/src/ros/unitree_ros2/setup.sh; \
+			echo "[auto-source] sourced: /workspace/src/ros/unitree_ros2/setup.sh"; \
+		else \
+			echo "[auto-source] missing: /workspace/src/ros/unitree_ros2/setup.sh"; \
+		fi; \
+		if [ -f /workspace/install/setup.bash ]; then \
+			source /workspace/install/setup.bash; \
+			echo "[auto-source] sourced: /workspace/install/setup.bash"; \
+		else \
+			echo "[auto-source] missing: /workspace/install/setup.bash"; \
+		fi; \
+		exec bash -i'
 
 src-list:
 	$(LIST_TARGET_SRC) $(TARGET)
@@ -75,6 +90,9 @@ src-stage:
 		rsync -a --exclude '.git' "$$p/" "$(STAGE_DIR)/$$p/"; \
 	done
 	@echo "Staged source set for $(TARGET): $(STAGE_DIR)"
+
+sync-configs:
+	$(SYNC_CONFIGS)
 
 colcon-build:
 	@set -e; \

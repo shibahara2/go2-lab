@@ -11,4 +11,6 @@
 /.venv/
 /.python-version
 /uv.lock
+.env
+.env.local
 *~
