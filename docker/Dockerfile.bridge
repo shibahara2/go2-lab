@@ -1,8 +1,6 @@
 FROM osrf/ros:humble-desktop-full
 SHELL ["/bin/bash", "-c"]
 
-ENV TZ=Asia/Shanghai
-RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 USER root
 
 RUN apt update && \
@@ -31,8 +29,5 @@ ENV CC=/usr/bin/clang-18
 ENV CXX=/usr/bin/clang++-18
 
 WORKDIR /workspace
-COPY ./bashrc.shared /etc/go2-lab.bashrc
-RUN chmod 644 /etc/go2-lab.bashrc && \
-    printf '\nif [ -f /etc/go2-lab.bashrc ]; then\n  source /etc/go2-lab.bashrc\nfi\n' >> /root/.bashrc
 RUN apt update && apt install -y python3-ament-package ros-humble-rmw-cyclonedds-cpp ros-humble-rosidl-generator-dds-idl
 CMD ["bash"]

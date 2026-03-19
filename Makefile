@@ -2,9 +2,12 @@ TARGET ?= jetson
 DOCKER_COMPOSE = docker compose -f docker/docker-compose.yml
 LIST_TARGET_SRC = ./scripts/list_target_src.sh
 SYNC_CONFIGS = ./scripts/sync_configs.sh
+VISUALIZATION_HOST_SHELL = ./scripts/visualization_host_shell.sh
 STAGE_DIR ?= .staging/$(TARGET)
 ROS_SRC_PREFIX = src/ros/
 ZENOH_BUILD_ROOTS = src/zenoh src/zenoh-plugin-ros2dds
+ALL_TARGETS = jetson bridge visualization-host
+DOCKER_TARGETS = jetson bridge
 
 ifeq ($(TARGET),jetson)
 PROFILE = jetson
@@ -24,22 +27,26 @@ endif
 
 help:
 	@echo "Usage:"
-	@echo "  make build TARGET=jetson   # build Jetson services"
-	@echo "  make build TARGET=bridge   # build bridge services"
-	@echo "  make up TARGET=jetson      # run services in background"
-	@echo "  make shell TARGET=jetson   # enter primary container"
-	@echo "  make src-list TARGET=jetson # list src paths for target"
-	@echo "  make src-stage TARGET=jetson STAGE_DIR=.staging/jetson"
+	@echo "  TARGET values: $(ALL_TARGETS)"
+	@echo "  Docker-capable TARGET values: $(DOCKER_TARGETS)"
+	@echo "  make build TARGET=jetson              # build Jetson services"
+	@echo "  make build TARGET=bridge              # build bridge services"
+	@echo "  make up TARGET=jetson                 # run services in background"
+	@echo "  make shell TARGET=jetson              # enter primary container"
+	@echo "  make shell TARGET=visualization-host  # open host shell with auto env/source"
+	@echo "  make src-list TARGET=visualization-host # list deploy paths for visualization host"
+	@echo "  make src-stage TARGET=visualization-host STAGE_DIR=.staging/visualization-host"
 	@echo "  make sync-configs          # copy tracked config templates into src/"
-	@echo "  make colcon-build TARGET=bridge # build ROS packages under $(ROS_SRC_PREFIX) only"
-	@echo "  make zenoh-build TARGET=bridge  # build $(ZENOH_BUILD_ROOTS)"
-	@echo "  make target-build TARGET=bridge # build ROS + Rust with one command"
+	@echo "  make colcon-build TARGET=jetson        # build ROS packages under $(ROS_SRC_PREFIX) only"
+	@echo "  make zenoh-build TARGET=visualization-host # build $(ZENOH_BUILD_ROOTS)"
+	@echo "  make target-build TARGET=visualization-host # build ROS + Rust with one command"
 	@echo "  # add future targets via configs/deploy/src-<target>.txt"
 
 require-docker-target:
 	@if [ -z "$(SERVICES)" ]; then \
 		echo "Unsupported docker TARGET='$(TARGET)'."; \
-		echo "Add mapping in Makefile (PROFILE/SERVICES/PRIMARY_SERVICE)."; \
+		echo "Docker commands are available only for: $(DOCKER_TARGETS)"; \
+		echo "Use src-list/src-stage/colcon-build/zenoh-build/target-build for non-Docker targets."; \
 		exit 1; \
 	fi
 
@@ -58,23 +65,31 @@ ps: require-docker-target
 logs: require-docker-target
 	$(DOCKER_COMPOSE) --profile $(PROFILE) logs -f $(SERVICES)
 
-shell: require-docker-target
-	@$(DOCKER_COMPOSE) exec $(PRIMARY_SERVICE) bash -lc 'cd /workspace; \
-		if [ "$(TARGET)" = "jetson" ]; then \
-			if [ -f /workspace/src/ros/unitree_ros2/setup.sh ]; then \
-				source /workspace/src/ros/unitree_ros2/setup.sh; \
-				echo "[auto-source] sourced: /workspace/src/ros/unitree_ros2/setup.sh"; \
-			else \
-				echo "[auto-source] missing: /workspace/src/ros/unitree_ros2/setup.sh"; \
+shell:
+	@if [ "$(TARGET)" = "visualization-host" ]; then \
+		bash $(VISUALIZATION_HOST_SHELL); \
+	elif [ -n "$(SERVICES)" ]; then \
+		$(DOCKER_COMPOSE) exec $(PRIMARY_SERVICE) bash -lc 'cd /workspace; \
+			if [ "$(TARGET)" = "jetson" ]; then \
+				if [ -f /workspace/src/ros/unitree_ros2/setup.sh ]; then \
+					source /workspace/src/ros/unitree_ros2/setup.sh; \
+					echo "[auto-source] sourced: /workspace/src/ros/unitree_ros2/setup.sh"; \
+				else \
+					echo "[auto-source] missing: /workspace/src/ros/unitree_ros2/setup.sh"; \
+				fi; \
+				if [ -f /workspace/install/setup.bash ]; then \
+					source /workspace/install/setup.bash; \
+					echo "[auto-source] sourced: /workspace/install/setup.bash"; \
+				else \
+					echo "[auto-source] missing: /workspace/install/setup.bash"; \
+				fi; \
 			fi; \
-			if [ -f /workspace/install/setup.bash ]; then \
-				source /workspace/install/setup.bash; \
-				echo "[auto-source] sourced: /workspace/install/setup.bash"; \
-			else \
-				echo "[auto-source] missing: /workspace/install/setup.bash"; \
-			fi; \
-		fi; \
-		exec bash -i'
+			exec bash -i'; \
+	else \
+		echo "Unsupported shell TARGET='$(TARGET)'."; \
+		echo "Shell is available for: $(ALL_TARGETS)"; \
+		exit 1; \
+	fi
 
 src-list:
 	$(LIST_TARGET_SRC) $(TARGET)
