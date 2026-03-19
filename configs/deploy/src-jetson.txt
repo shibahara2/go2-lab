@@ -1,7 +1,0 @@
-# Paths under repository root specific to Jetson only.
-src/zenoh
-src/zenoh-plugin-ros2dds
-src/ros/unitree_ros2
-src/ros/cmd_vel_control
-src/ros/FAST_LIO
-src/ros/livox_ros_driver2

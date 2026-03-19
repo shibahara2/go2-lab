@@ -15,8 +15,8 @@ services:
     command: /bin/bash -lc "while sleep 1000; do :; done"
 
     build:
-      context: .
-      dockerfile: Dockerfile.bridge
+      context: ..
+      dockerfile: docker/Dockerfile.bridge
     image: go2-lab:bridge
     container_name: bridge
     privileged: true
@@ -25,8 +25,8 @@ services:
     profiles: ["jetson"]
     platform: linux/arm64
     build:
-      context: .
-      dockerfile: Dockerfile.jetson
+      context: ..
+      dockerfile: docker/Dockerfile.jetson
       network: host
     image: go2-lab:jetson
     container_name: jetson

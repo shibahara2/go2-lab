@@ -86,12 +86,11 @@ make shell TARGET=bridge
 [公式ドキュメント](https://docs.ros.org/en/humble/Installation/Ubuntu-Install-Debs.html)にしたがってROSをインストールします。
 
 次に、ビルドに必要なシステムパッケージと ROS パッケージをまとめてインストールします。
+パッケージ一覧は `configs/deps/packages.txt` で全ターゲット共通に管理しています。
 
 ```bash
 make host-deps-install
 ```
-
-[公式ドキュメント](https://rust-lang.org/ja/tools/install/)に従ってcargo, rustcをインストールします。
 
 [公式ドキュメント](https://github.com/Livox-SDK/Livox-SDK2)に従って Livox SDK2 をインストールします。
 `vcs import` 後は `src/Livox-SDK2` が存在するため、そこからビルド・インストールします。
@@ -102,7 +101,7 @@ make livox-sdk-install TARGET=visualization-host
 
 ## 5. パッケージビルド
 
-`make target-build TARGET=<target>` は `TARGET` ごとの配備一覧を見て、`src/ros` 配下の ROS パッケージと `src/zenoh` / `src/zenoh-plugin-ros2dds` の Rust ワークスペースをビルドします。
+`make target-build TARGET=<target>` は `src/ros` 配下の ROS パッケージと `src/zenoh` / `src/zenoh-plugin-ros2dds` の Rust ワークスペースをビルドします。
 `jetson` / `bridge` は通常コンテナ内で実行し、`visualization-host` はホスト環境で実行します。
 
 ```bash
@@ -193,31 +192,13 @@ RVizの目安:
 make sync-configs
 ```
 
-### 9.1 確認/ステージング
+### 9.1 ビルド対象
 
-`TARGET` ごとの `src` 配下のデプロイ対象は以下のファイルで管理します。
-- Jetson: `configs/deploy/src-jetson.txt`
-- Bridge: `configs/deploy/src-bridge.txt`
-- 可視化ホスト: `configs/deploy/src-visualization-host.txt`
+ROS パッケージは `src/ros` 配下を、Rust ワークスペースは `src/zenoh` / `src/zenoh-plugin-ros2dds` を直接ビルドします。
+ターゲット別のソース一覧ファイルは廃止しました。
 
-現状の役割分担は以下です。
-- `src-jetson.txt`: Jetson 上で使う Zenoh / ROS パッケージ / デバイス側資材
-- `src-bridge.txt`: bridge 上で使う Zenoh 系資材
-- `src-visualization-host.txt`: 可視化ホスト上で使う Zenoh 系資材と追加配布物
-
-構成変更後に配備対象を確認したい場合や、配布前にステージングしたい場合は以下を実行します。
-
-```bash
-cd /home/unitree/go2-lab
-make src-list TARGET=jetson
-make src-stage TARGET=jetson STAGE_DIR=.staging/jetson
-```
-
-`make src-list TARGET=<target>` は対象ターゲットの配備一覧を表示します。
-`make src-stage TARGET=<target>` / `make colcon-build TARGET=<target>` / `make zenoh-build TARGET=<target>` / `make target-build TARGET=<target>` は、Docker を使わない `visualization-host` でも利用できます。
-将来ターゲットを増やす場合は `configs/deploy/src-<new-target>.txt` を追加します。
-Docker コンテナ実行も必要なら `Makefile` に `PROFILE/SERVICES/PRIMARY_SERVICE` の対応を追加します。
-列挙したパスがリポジトリ内に存在しない場合、`make src-list` / `make colcon-build` / `make target-build` は設定エラーとして即座に失敗します。
+`make colcon-build` / `make zenoh-build` / `make target-build` は、Docker を使わない `visualization-host` でも利用できます。
+将来ターゲットを増やす場合は `Makefile` に `PROFILE/SERVICES/PRIMARY_SERVICE` の対応を追加します。
 
 ### 9.2 環境変数メモ（調査中）
 

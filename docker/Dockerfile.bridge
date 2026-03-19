@@ -3,20 +3,11 @@ SHELL ["/bin/bash", "-c"]
 
 USER root
 
-RUN apt update && \
-    apt install -y \
-        cargo \
-        clang \
-        cmake \
-        git \
-        libclang-dev \
-        libssl-dev \
-        lsb-release \
-        gnupg \
-        software-properties-common \
-        pkg-config \
-        rustc \
-        wget
+COPY configs/deps/packages.txt /tmp/packages.txt
+RUN apt-get update && \
+    grep -v '^\s*#' /tmp/packages.txt | grep -v '^\s*$' | \
+    xargs apt-get install -y && \
+    apt-get install -y lsb-release gnupg software-properties-common
 
 # install clang tools
 RUN wget https://apt.llvm.org/llvm.sh && chmod +x llvm.sh && ./llvm.sh 18 all
@@ -29,6 +20,7 @@ ENV CC=/usr/bin/clang-18
 ENV CXX=/usr/bin/clang++-18
 
 WORKDIR /workspace
-RUN apt update && apt install -y python3-ament-package ros-humble-rmw-cyclonedds-cpp ros-humble-rosidl-generator-dds-idl
+# python3-ament-package, ros-humble-rmw-cyclonedds-cpp, ros-humble-rosidl-generator-dds-idl
+# are already installed via packages.txt
 RUN echo 'set -o vi' >> /root/.bashrc
 CMD ["bash"]
