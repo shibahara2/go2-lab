@@ -58,17 +58,17 @@ uvx --from vcstool vcs import --force < go2.repos
 
 ### jetson
 ```bash
-# Jetson 向け (jetson)
 make sync-configs
 make build TARGET=jetson
 make up TARGET=jetson
 make shell TARGET=jetson
 ```
 
-コンテナ起動後、初回のみ Livox SDK2 をインストールします。
+コンテナ起動後、初回のみコンテナ内で Livox SDK2 をインストールします。
 
 ```bash
-make livox-sdk-install TARGET=jetson
+make shell TARGET=jetson
+make livox-sdk-install
 ```
 
 ### bridge
@@ -96,24 +96,25 @@ make host-deps-install
 `vcs import` 後は `src/Livox-SDK2` が存在するため、そこからビルド・インストールします。
 
 ```bash
-make livox-sdk-install TARGET=visualization-host
+make livox-sdk-install
 ```
 
 ## 5. パッケージビルド
 
-`make target-build TARGET=<target>` は `src/ros` 配下の ROS パッケージと `src/zenoh` / `src/zenoh-plugin-ros2dds` の Rust ワークスペースをビルドします。
+`make target-build` は `src/ros` 配下の ROS パッケージと `src/zenoh` / `src/zenoh-plugin-ros2dds` の Rust ワークスペースをビルドします。
 `jetson` / `bridge` は通常コンテナ内で実行し、`visualization-host` はホスト環境で実行します。
+ビルドコマンド (`colcon-build` / `zenoh-build` / `target-build`) は TARGET に依存しません。
 
 ```bash
 make shell TARGET=<target>         # target: jetson / bridge TODO: visualization-hostで環境変数セットやsourceを行う
-make target-build TARGET=<target>
+make target-build
 ```
 
 <details><summary>補足: 個別ビルド</summary>
 
-- `make target-build TARGET=<target>` は、`make colcon-build` と `make zenoh-build` を一度に行います。
-- `make colcon-build TARGET=<target>` は、対象ターゲットのうち `src/ros` 配下にある search root を `colcon build --base-paths` に渡し、その配下の ROS パッケージを再帰的に探索してビルドします。`TARGET=bridge` と `TARGET=visualization-host` では ROS パッケージが無いため no-op です。
-- `make zenoh-build TARGET=<target>` は、`src/zenoh` と `src/zenoh-plugin-ros2dds` の Rust ワークスペースを `cargo build --release` します。
+- `make target-build` は、`make colcon-build` と `make zenoh-build` を一度に行います。
+- `make colcon-build` は、`src/ros` 配下の ROS パッケージを再帰的に探索してビルドします。`bridge` や `visualization-host` では ROS パッケージが無いため no-op です。
+- `make zenoh-build` は、`src/zenoh` と `src/zenoh-plugin-ros2dds` の Rust ワークスペースを `cargo build --release` します。
 </details>
 
 ## 7. 起動順
@@ -195,10 +196,9 @@ make sync-configs
 ### 9.1 ビルド対象
 
 ROS パッケージは `src/ros` 配下を、Rust ワークスペースは `src/zenoh` / `src/zenoh-plugin-ros2dds` を直接ビルドします。
-ターゲット別のソース一覧ファイルは廃止しました。
 
-`make colcon-build` / `make zenoh-build` / `make target-build` は、Docker を使わない `visualization-host` でも利用できます。
-将来ターゲットを増やす場合は `Makefile` に `PROFILE/SERVICES/PRIMARY_SERVICE` の対応を追加します。
+`make colcon-build` / `make zenoh-build` / `make target-build` は Docker を使わない `visualization-host` でも利用できます。
+将来 Docker ターゲットを増やす場合は `docker-compose.yml` にサービスとプロファイルを追加し、`Makefile` の `DOCKER_TARGETS` に名前を追加します。
 
 ### 9.2 環境変数メモ（調査中）
 

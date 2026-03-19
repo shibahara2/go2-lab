@@ -20,7 +20,5 @@ ENV CC=/usr/bin/clang-18
 ENV CXX=/usr/bin/clang++-18
 
 WORKDIR /workspace
-# python3-ament-package, ros-humble-rmw-cyclonedds-cpp, ros-humble-rosidl-generator-dds-idl
-# are already installed via packages.txt
 RUN echo 'set -o vi' >> /root/.bashrc
 CMD ["bash"]

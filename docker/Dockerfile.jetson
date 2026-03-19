@@ -2,9 +2,6 @@ FROM althack/ros2:humble-full
 SHELL ["/bin/bash", "-c"]
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Author: TaeYoung Kim
-# email: tyoung96@yonsei.ac.kr
-
 COPY configs/deps/packages.txt /tmp/packages.txt
 RUN apt-get update && \
     grep -v '^\s*#' /tmp/packages.txt | grep -v '^\s*$' | \
