@@ -23,7 +23,7 @@ SERVICES =
 PRIMARY_SERVICE =
 endif
 
-.PHONY: help build up down ps logs shell src-list src-stage sync-configs colcon-build zenoh-build target-build require-docker-target
+.PHONY: help build up down ps logs shell src-list src-stage sync-configs colcon-build zenoh-build target-build require-docker-target host-deps-install livox-sdk-install
 
 help:
 	@echo "Usage:"
@@ -40,6 +40,7 @@ help:
 	@echo "  make colcon-build TARGET=jetson        # build ROS packages under $(ROS_SRC_PREFIX) only"
 	@echo "  make zenoh-build TARGET=visualization-host # build $(ZENOH_BUILD_ROOTS)"
 	@echo "  make target-build TARGET=visualization-host # build ROS + Rust with one command"
+	@echo "  make host-deps-install                # install system/ROS packages for host builds"
 	@echo "  # add future targets via configs/deploy/src-<target>.txt"
 
 require-docker-target:
@@ -124,7 +125,22 @@ colcon-build:
 		exit 0; \
 	fi; \
 	echo "colcon base paths ($(ROS_SRC_PREFIX) only):$$paths"; \
-	colcon build --base-paths $$paths --symlink-install
+	find src/ros -name "package_ROS2.xml" | while IFS= read -r f; do \
+		dir=$$(dirname "$$f"); \
+		if [ ! -f "$$dir/package.xml" ]; then \
+			echo "Copying $$f -> $$dir/package.xml"; \
+			cp "$$f" "$$dir/package.xml"; \
+		fi; \
+	done; \
+	find src/ros -name "launch_ROS2" -type d | while IFS= read -r d; do \
+		target_dir="$$(dirname "$$d")/launch"; \
+		if [ ! -d "$$target_dir" ]; then \
+			echo "Copying $$d -> $$target_dir"; \
+			cp -rf "$$d" "$$target_dir"; \
+		fi; \
+	done; \
+	colcon build --base-paths $$paths --symlink-install \
+		--cmake-args -DROS_EDITION=ROS2 -DHUMBLE_ROS=humble
 
 zenoh-build:
 	@set -e; \
@@ -147,3 +163,40 @@ zenoh-build:
 	done
 
 target-build: colcon-build zenoh-build
+
+host-deps-install:
+	sudo apt-get update && sudo apt-get install -y \
+		cmake \
+		git \
+		libatlas-base-dev \
+		libeigen3-dev \
+		libglew-dev \
+		libgoogle-glog-dev \
+		libpcl-dev \
+		libsuitesparse-dev \
+		libssl-dev \
+		pkg-config \
+		python3-pip \
+		unzip \
+		wget \
+		ros-humble-cv-bridge \
+		ros-humble-image-transport \
+		ros-humble-image-transport-plugins \
+		ros-humble-pcl-conversions \
+		ros-humble-pcl-ros \
+		ros-humble-rmw-cyclonedds-cpp \
+		ros-humble-robot-state-publisher \
+		ros-humble-rosidl-generator-dds-idl \
+		ros-humble-rviz2 \
+		ros-humble-tf2 \
+		ros-humble-xacro
+
+livox-sdk-install:
+ifeq ($(TARGET),visualization-host)
+	cd src/Livox-SDK2 && mkdir -p build && cd build && cmake .. && make -j$$(nproc) && sudo make install
+else ifeq ($(TARGET),jetson)
+	$(DOCKER_COMPOSE) --profile jetson exec jetson bash -lc \
+		'cd /workspace/src/Livox-SDK2 && mkdir -p build && cd build && cmake .. && make -j$$(nproc) && make install'
+else
+	@echo "livox-sdk-install supports TARGET=jetson or TARGET=visualization-host"; exit 1
+endif

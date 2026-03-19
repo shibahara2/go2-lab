@@ -2,6 +2,7 @@
 /src/ros/livox_ros_driver2/
 /src/ros/ros_tutorials/
 /src/ros/unitree_ros2/
+/src/Livox-SDK2/
 /src/zenoh/
 /src/zenoh-plugin-ros2dds/
 .env

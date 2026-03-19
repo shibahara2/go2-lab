@@ -30,4 +30,5 @@ ENV CXX=/usr/bin/clang++-18
 
 WORKDIR /workspace
 RUN apt update && apt install -y python3-ament-package ros-humble-rmw-cyclonedds-cpp ros-humble-rosidl-generator-dds-idl
+RUN echo 'set -o vi' >> /root/.bashrc
 CMD ["bash"]

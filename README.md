@@ -56,14 +56,23 @@ uvx --from vcstool vcs import --force < go2.repos
 `visualization-host` はホスト上でネイティブに運用します。
 初回セットアップ時は、`configs/` 配下の正本を `src/` 配下へ反映するために `make sync-configs` を先に実行します。
 
+### jetson
 ```bash
 # Jetson 向け (jetson)
 make sync-configs
 make build TARGET=jetson
 make up TARGET=jetson
 make shell TARGET=jetson
+```
 
-# 中継PC向け (bridge)
+コンテナ起動後、初回のみ Livox SDK2 をインストールします。
+
+```bash
+make livox-sdk-install TARGET=jetson
+```
+
+### bridge
+```bash
 make sync-configs
 make build TARGET=bridge
 make up TARGET=bridge
@@ -72,28 +81,24 @@ make shell TARGET=bridge
 
 ### visualization-host
 
-Ubuntu ホスト側には ROS 2 Humble と `rviz2` をネイティブに導入します。
-このリポジトリはホスト環境を構成管理せず、必要パッケージと実行条件を手順として管理します。
+可視化PCには ROS 2 Humbleをネイティブに導入します。
+
+[公式ドキュメント](https://docs.ros.org/en/humble/Installation/Ubuntu-Install-Debs.html)にしたがってROSをインストールします。
+
+次に、ビルドに必要なシステムパッケージと ROS パッケージをまとめてインストールします。
 
 ```bash
-sudo apt install -y \
-  ros-humble-rmw-cyclonedds-cpp \
-  ros-humble-rosidl-generator-dds-idl
+make host-deps-install
 ```
 
 [公式ドキュメント](https://rust-lang.org/ja/tools/install/)に従ってcargo, rustcをインストールします。
 
-`make shell TARGET=<target>` は Docker 対応 target (`jetson` / `bridge`) でのみ使えます。
-コンテナに入ると、以下を自動で読み込みます。
-- `/workspace/src/ros/unitree_ros2/setup.sh`
-- `/workspace/install/setup.bash`
+[公式ドキュメント](https://github.com/Livox-SDK/Livox-SDK2)に従って Livox SDK2 をインストールします。
+`vcs import` 後は `src/Livox-SDK2` が存在するため、そこからビルド・インストールします。
 
-`TARGET=jetson` の場合は起動時に、実際に `source` できたパスを `[auto-source] sourced: ...` として表示します。
-未生成のファイルは `[auto-source] missing: ...` と表示されます。`TARGET=bridge` は relay 用の素のシェルを開き、ROS ワークスペースは自動 `source` しません。
-
-このリポジトリの対話シェルは `bash` に統一しており、コンテナ内では `set -o vi` を有効化しています。
-基本操作は `Esc` でコマンドモード、`i` / `a` で挿入モード、`0` / `$` / `b` / `w` で移動です。
-配備対象の確認やステージングが必要な場合は、後述の `9.1 確認/ステージング` を参照してください。
+```bash
+make livox-sdk-install TARGET=visualization-host
+```
 
 ## 5. パッケージビルド
 

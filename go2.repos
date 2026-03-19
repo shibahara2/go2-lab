@@ -1,4 +1,8 @@
 repositories:
+  src/Livox-SDK2:
+    type: git
+    url: https://github.com/Livox-SDK/Livox-SDK2.git
+    version: 6a940156dd7151c3ab6a52442d86bc83613bd11b
   src/ros/FAST_LIO:
     type: git
     url: https://github.com/Ericsii/FAST_LIO_ROS2.git
