@@ -1,3 +1,5 @@
 # Paths under repository root specific to the visualization host.
 src/zenoh
 src/zenoh-plugin-ros2dds
+src/ros/livox_ros_driver2
+src/ros/FAST_LIO

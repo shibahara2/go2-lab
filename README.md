@@ -50,7 +50,7 @@ uvx --from vcstool vcs import --force < go2.repos
 
 `uvx` は `uv tool run` のエイリアスです。
 
-## 4. コンテナ作成
+## 4. 実行環境構築
 `TARGET` は `jetson` / `bridge` / `visualization-host` の配備対象を表します。
 このうち Docker で管理するのは `jetson` と `bridge` のみです。
 `visualization-host` はホスト上でネイティブに運用します。
@@ -70,6 +70,19 @@ make up TARGET=bridge
 make shell TARGET=bridge
 ```
 
+### visualization-host
+
+Ubuntu ホスト側には ROS 2 Humble と `rviz2` をネイティブに導入します。
+このリポジトリはホスト環境を構成管理せず、必要パッケージと実行条件を手順として管理します。
+
+```bash
+sudo apt install -y \
+  ros-humble-rmw-cyclonedds-cpp \
+  ros-humble-rosidl-generator-dds-idl
+```
+
+[公式ドキュメント](https://rust-lang.org/ja/tools/install/)に従ってcargo, rustcをインストールします。
+
 `make shell TARGET=<target>` は Docker 対応 target (`jetson` / `bridge`) でのみ使えます。
 コンテナに入ると、以下を自動で読み込みます。
 - `/workspace/src/ros/unitree_ros2/setup.sh`
@@ -85,11 +98,10 @@ make shell TARGET=bridge
 ## 5. パッケージビルド
 
 `make target-build TARGET=<target>` は `TARGET` ごとの配備一覧を見て、`src/ros` 配下の ROS パッケージと `src/zenoh` / `src/zenoh-plugin-ros2dds` の Rust ワークスペースをビルドします。
-`jetson` / `bridge` は通常コンテナ内で実行し、`visualization-host` はホスト環境で必要な範囲だけ実行します。
-`make sync-configs` はコンテナ作成前に一度実行すれば十分で、ビルドのたびに毎回実行する必要はありません。
+`jetson` / `bridge` は通常コンテナ内で実行し、`visualization-host` はホスト環境で実行します。
 
 ```bash
-make shell TARGET=<target>         # target: jetson / bridge
+make shell TARGET=<target>         # target: jetson / bridge TODO: visualization-hostで環境変数セットやsourceを行う
 make target-build TARGET=<target>
 ```
 
@@ -99,27 +111,6 @@ make target-build TARGET=<target>
 - `make colcon-build TARGET=<target>` は、対象ターゲットのうち `src/ros` 配下にある search root を `colcon build --base-paths` に渡し、その配下の ROS パッケージを再帰的に探索してビルドします。`TARGET=bridge` と `TARGET=visualization-host` では ROS パッケージが無いため no-op です。
 - `make zenoh-build TARGET=<target>` は、`src/zenoh` と `src/zenoh-plugin-ros2dds` の Rust ワークスペースを `cargo build --release` します。
 </details>
-
-## 6. ホスト GUI セットアップ
-
-Ubuntu ホスト側には ROS 2 Humble と `rviz2` をネイティブに導入します。
-このリポジトリはホスト環境を構成管理せず、必要パッケージと実行条件を手順として管理します。
-
-```bash
-sudo apt install -y \
-  ros-humble-rmw-cyclonedds-cpp \
-  ros-humble-rosidl-generator-dds-idl
-```
-
-ホスト上で `rviz2` や `ros2 topic ...` を実行するシェルでは、以下を設定します。
-
-```bash
-source /opt/ros/humble/setup.bash
-export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
-export ROS_DOMAIN_ID=0
-```
-
-必要なら `ROS_DOMAIN_ID` は Jetson / bridge と同じ値に揃えてください。
 
 ## 7. 起動順
 
