@@ -15,7 +15,7 @@ ARG USERNAME
 ARG USER_UID
 ARG USER_GID
 RUN groupadd --gid $USER_GID $USERNAME || true && \
-    useradd --uid $USER_UID --gid $USER_GID -m $USERNAME && \
+    useradd --uid $USER_UID --gid $USER_GID -m $USERNAME -o && \
     usermod -aG video $USERNAME
 
 WORKDIR /workspace
