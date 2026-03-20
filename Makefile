@@ -1,5 +1,5 @@
 TARGET ?= jetson
-DOCKER_COMPOSE = docker compose -f docker/docker-compose.yml
+DOCKER_COMPOSE = docker compose -f docker/docker-compose.yml --env-file .env.$(TARGET)
 SYNC_CONFIGS = ./scripts/sync_configs.sh
 VISUALIZATION_HOST_SHELL = ./scripts/visualization_host_shell.sh
 ROS_SRC_PREFIX = src/ros/
@@ -7,7 +7,7 @@ ZENOH_BUILD_ROOTS = src/zenoh src/zenoh-plugin-ros2dds
 ALL_TARGETS = jetson bridge visualization-host
 DOCKER_TARGETS = jetson bridge
 
-.PHONY: help build up down ps logs shell sync-configs colcon-build zenoh-build target-build require-docker-target host-deps-install livox-sdk-install docker-env
+.PHONY: help build up down ps logs shell sync-configs colcon-build zenoh-build target-build require-docker-target host-deps-install livox-sdk-install
 
 help:
 	@echo "Usage:"
@@ -33,12 +33,7 @@ require-docker-target:
 		exit 1; \
 	}
 
-docker-env:
-	@echo "USER=$(shell whoami)" > docker/.env
-	@echo "UID=$(shell id -u)" >> docker/.env
-	@echo "GID=$(shell id -g)" >> docker/.env
-
-build: require-docker-target docker-env
+build: require-docker-target
 	$(DOCKER_COMPOSE) --profile $(TARGET) build $(TARGET)
 
 up: require-docker-target
@@ -57,7 +52,7 @@ shell:
 	@if [ "$(TARGET)" = "visualization-host" ]; then \
 		bash $(VISUALIZATION_HOST_SHELL); \
 	elif echo "$(DOCKER_TARGETS)" | grep -qw "$(TARGET)"; then \
-		cd / && docker compose --project-directory $(CURDIR)/docker -f $(CURDIR)/docker/docker-compose.yml exec -w / $(TARGET) bash -lc 'cd /workspace; \
+		cd / && docker compose --project-directory $(CURDIR)/docker -f $(CURDIR)/docker/docker-compose.yml --env-file $(CURDIR)/.env.$(TARGET) exec -w / $(TARGET) bash -lc 'cd /workspace; \
 			if [ -f /workspace/src/ros/unitree_ros2/setup.sh ]; then \
 				source /workspace/src/ros/unitree_ros2/setup.sh; \
 				echo "[auto-source] sourced: /workspace/src/ros/unitree_ros2/setup.sh"; \

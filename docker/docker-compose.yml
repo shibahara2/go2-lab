@@ -5,19 +5,12 @@ services:
     volumes:
       - ..:/workspace:cached
     env_file: ../.env.bridge
-    environment:
-      - RMW_IMPLEMENTATION=${RMW_IMPLEMENTATION:-rmw_cyclonedds_cpp}
-      - ROS_LOCALHOST_ONLY=1
-      - ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-0}
     command: /bin/bash -lc "while sleep 1000; do :; done"
     build:
       context: ..
       dockerfile: docker/Dockerfile
       args:
         BASE_IMAGE: osrf/ros:humble-desktop-full
-        USERNAME: ${USER}
-        USER_UID: ${UID}
-        USER_GID: ${GID}
     image: go2-lab:bridge
     container_name: bridge
     network_mode: "host"
@@ -30,9 +23,6 @@ services:
       dockerfile: docker/Dockerfile
       args:
         BASE_IMAGE: althack/ros2:humble-full
-        USERNAME: ${USER}
-        USER_UID: ${UID}
-        USER_GID: ${GID}
       network: host
     image: go2-lab:jetson
     container_name: jetson
@@ -43,18 +33,11 @@ services:
     shm_size: "${DOCKER_SHM_SIZE:-4gb}"
     runtime: nvidia
     env_file: ../.env.jetson
-    environment:
-      NVIDIA_DRIVER_CAPABILITIES: "all"
-      NVIDIA_VISIBLE_DEVICES: "all"
-      DISPLAY: ${DISPLAY}
-      RMW_IMPLEMENTATION: "${RMW_IMPLEMENTATION:-rmw_cyclonedds_cpp}"
-      ROS_DOMAIN_ID: "${ROS_DOMAIN_ID:-0}"
     dns:
       - 8.8.8.8
       - 1.1.1.1
     working_dir: /workspace
     volumes:
       - ..:/workspace:cached
-      - ${LIDAR_DATASET_PATH:-/data/LIDAR_dataset}:/home/${USER}/data
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
     command: /bin/bash -lc "while sleep 1000; do :; done"

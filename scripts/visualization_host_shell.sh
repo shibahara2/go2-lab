@@ -4,11 +4,11 @@ set -euo pipefail
 repo_root="$(cd "$(dirname "$0")/.." && pwd)"
 cd "${repo_root}"
 
-# Load .env if available
-if [ -f "${repo_root}/.env" ]; then
+# Load .env.visualization-host if available
+if [ -f "${repo_root}/.env.visualization-host" ]; then
   set -a
   # shellcheck disable=SC1090
-  source "${repo_root}/.env"
+  source "${repo_root}/.env.visualization-host"
   set +a
 fi
 
