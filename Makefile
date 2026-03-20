@@ -7,7 +7,7 @@ ZENOH_BUILD_ROOTS = src/zenoh src/zenoh-plugin-ros2dds
 ALL_TARGETS = jetson bridge visualization-host
 DOCKER_TARGETS = jetson bridge
 
-.PHONY: help build up down ps logs shell sync-configs colcon-build zenoh-build target-build require-docker-target host-deps-install livox-sdk-install
+.PHONY: help build up down ps logs shell sync-configs colcon-build zenoh-build target-build require-docker-target host-deps-install livox-sdk-install docker-env
 
 help:
 	@echo "Usage:"
@@ -33,7 +33,12 @@ require-docker-target:
 		exit 1; \
 	}
 
-build: require-docker-target
+docker-env:
+	@echo "USER=$(shell whoami)" > docker/.env
+	@echo "UID=$(shell id -u)" >> docker/.env
+	@echo "GID=$(shell id -g)" >> docker/.env
+
+build: require-docker-target docker-env
 	$(DOCKER_COMPOSE) --profile $(TARGET) build $(TARGET)
 
 up: require-docker-target

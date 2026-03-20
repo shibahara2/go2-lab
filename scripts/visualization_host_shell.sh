@@ -6,7 +6,9 @@ cd "${repo_root}"
 
 if [ -f /opt/ros/humble/setup.bash ]; then
   # shellcheck disable=SC1091
+  set +u
   source /opt/ros/humble/setup.bash
+  set -u
   echo "[auto-source] sourced: /opt/ros/humble/setup.bash"
 else
   echo "[auto-source] missing: /opt/ros/humble/setup.bash"

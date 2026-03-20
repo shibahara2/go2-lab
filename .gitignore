@@ -6,6 +6,7 @@
 /src/zenoh/
 /src/zenoh-plugin-ros2dds/
 .env
+docker/.env
 *~
 /install
 /build

@@ -64,13 +64,6 @@ make up TARGET=jetson
 make shell TARGET=jetson
 ```
 
-コンテナ起動後、初回のみコンテナ内で Livox SDK2 をインストールします。
-
-```bash
-make shell TARGET=jetson
-make livox-sdk-install
-```
-
 ### bridge
 ```bash
 make sync-configs
@@ -92,8 +85,8 @@ make shell TARGET=bridge
 make host-deps-install
 ```
 
-[公式ドキュメント](https://github.com/Livox-SDK/Livox-SDK2)に従って Livox SDK2 をインストールします。
-`vcs import` 後は `src/Livox-SDK2` が存在するため、そこからビルド・インストールします。
+### 共通
+初回のみ Livox SDK2 をインストールします。
 
 ```bash
 make livox-sdk-install
@@ -138,7 +131,7 @@ src/zenoh/target/release/zenohd -c zenoh-config-client.json
 ros2 launch livox_ros_driver2 msg_MID360_launch.py
 ```
 
-### 7.4 Jetson: FAST-LIO(ROS2) 起動 (Go2側でRVizは起動しない)
+### 7.4 Jetson: FAST-LIO 起動
 
 ```bash
 ros2 launch fast_lio mapping.launch.py config_file:=mid360.yaml rviz:=false
@@ -147,9 +140,6 @@ ros2 launch fast_lio mapping.launch.py config_file:=mid360.yaml rviz:=false
 ### 7.5 可視化PCホスト: トピック確認後に RViz2 起動
 
 ```bash
-source /opt/ros/humble/setup.bash
-export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
-export ROS_DOMAIN_ID=0
 ros2 topic list
 ros2 topic echo /Odometry --once
 rviz2

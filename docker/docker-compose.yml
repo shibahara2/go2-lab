@@ -1,52 +1,46 @@
-services: 
+services:
   bridge:
     profiles: ["bridge"]
     platform: linux/amd64
     volumes:
       - ..:/workspace:cached
-      - /var/run/docker.sock:/var/run/docker.sock
     environment:
       - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
       - ROS_LOCALHOST_ONLY=1
       - ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-0}
-
-    cap_add:
-      - SYS_PTRACE
     command: /bin/bash -lc "while sleep 1000; do :; done"
-
     build:
       context: ..
-      dockerfile: docker/Dockerfile.bridge
+      dockerfile: docker/Dockerfile
+      args:
+        BASE_IMAGE: osrf/ros:humble-desktop-full
+        USERNAME: ${USER}
+        USER_UID: ${UID}
+        USER_GID: ${GID}
     image: go2-lab:bridge
     container_name: bridge
-    privileged: true
     network_mode: "host"
+
   jetson:
     profiles: ["jetson"]
     platform: linux/arm64
     build:
       context: ..
-      dockerfile: docker/Dockerfile.jetson
+      dockerfile: docker/Dockerfile
+      args:
+        BASE_IMAGE: althack/ros2:humble-full
+        USERNAME: ${USER}
+        USER_UID: ${UID}
+        USER_GID: ${GID}
       network: host
     image: go2-lab:jetson
     container_name: jetson
     stdin_open: true
     tty: true
-
-    privileged: true
-
-    # --net=host
     network_mode: "host"
-
-    # --ipc=host
     ipc: "host"
-
-    # --shm-size=4gb
     shm_size: "4gb"
-
-    # 旧docker-compose互換のGPU指定
     runtime: nvidia
-
     environment:
       NVIDIA_DRIVER_CAPABILITIES: "all"
       NVIDIA_VISIBLE_DEVICES: "all"
@@ -57,16 +51,8 @@ services:
       - 8.8.8.8
       - 1.1.1.1
     working_dir: /workspace
-
     volumes:
-      # ホストのディレクトリ構成をそのまま使う
       - ..:/workspace:cached
-
-      # --volume=/data/LIDAR_dataset:/root/data
-      - /data/LIDAR_dataset:/root/data
-
-      # --volume=/tmp/.X11-unix:/tmp/.X11-unix:rw
+      - /data/LIDAR_dataset:/home/${USER}/data
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
-
     command: /bin/bash -lc "while sleep 1000; do :; done"
-    
