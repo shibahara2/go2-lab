@@ -1,5 +1,5 @@
 TARGET ?= jetson
-DOCKER_COMPOSE = docker compose -f $(CURDIR)/docker/docker-compose.yml
+DOCKER_COMPOSE = docker compose -f docker/docker-compose.yml
 SYNC_CONFIGS = ./scripts/sync_configs.sh
 VISUALIZATION_HOST_SHELL = ./scripts/visualization_host_shell.sh
 ROS_SRC_PREFIX = src/ros/
@@ -57,7 +57,7 @@ shell:
 	@if [ "$(TARGET)" = "visualization-host" ]; then \
 		bash $(VISUALIZATION_HOST_SHELL); \
 	elif echo "$(DOCKER_TARGETS)" | grep -qw "$(TARGET)"; then \
-		$(DOCKER_COMPOSE) exec -w / $(TARGET) bash -lc 'cd /workspace; \
+		cd / && docker compose --project-directory $(CURDIR)/docker -f $(CURDIR)/docker/docker-compose.yml exec -w / $(TARGET) bash -lc 'cd /workspace; \
 			if [ -f /workspace/src/ros/unitree_ros2/setup.sh ]; then \
 				source /workspace/src/ros/unitree_ros2/setup.sh; \
 				echo "[auto-source] sourced: /workspace/src/ros/unitree_ros2/setup.sh"; \
