@@ -57,7 +57,7 @@ shell:
 	@if [ "$(TARGET)" = "visualization-host" ]; then \
 		bash $(VISUALIZATION_HOST_SHELL); \
 	elif echo "$(DOCKER_TARGETS)" | grep -qw "$(TARGET)"; then \
-		$(DOCKER_COMPOSE) exec -w /workspace $(TARGET) bash -lc 'cd /workspace; \
+		cd / && $(DOCKER_COMPOSE) exec -w /workspace $(TARGET) bash -lc 'cd /workspace; \
 			if [ -f /workspace/src/ros/unitree_ros2/setup.sh ]; then \
 				source /workspace/src/ros/unitree_ros2/setup.sh; \
 				echo "[auto-source] sourced: /workspace/src/ros/unitree_ros2/setup.sh"; \
