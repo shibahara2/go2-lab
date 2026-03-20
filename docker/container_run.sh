@@ -4,6 +4,15 @@
 # Set the project directory (PROJECT_DIR) as the parent directory of the current working directory
 PROJECT_DIR=$(dirname "$PWD")
 
+# Load .env if available
+ENV_FILE="${PROJECT_DIR}/.env"
+if [ -f "${ENV_FILE}" ]; then
+  set -a
+  # shellcheck disable=SC1090
+  source "${ENV_FILE}"
+  set +a
+fi
+
 # Move to the parent folder of the project directory
 cd "$PROJECT_DIR"
 
@@ -26,11 +35,11 @@ nvidia-docker run --privileged -it \
   -e NVIDIA_DRIVER_CAPABILITIES=all \
   -e NVIDIA_VISIBLE_DEVICES=all \
   --volume="$PROJECT_DIR:/workspace" \
-  --volume=/data/LIDAR_dataset:/root/data \
+  --volume="${LIDAR_DATASET_PATH:-/data/LIDAR_dataset}:/root/data" \
   --volume=/tmp/.X11-unix:/tmp/.X11-unix:rw \
   --net=host \
   --ipc=host \
-  --shm-size=4gb \
+  --shm-size="${DOCKER_SHM_SIZE:-4gb}" \
   --name="$CONTAINER_NAME" \
   --env="DISPLAY=$DISPLAY" \
   --workdir=/workspace \

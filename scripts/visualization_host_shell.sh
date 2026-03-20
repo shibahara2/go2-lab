@@ -4,6 +4,14 @@ set -euo pipefail
 repo_root="$(cd "$(dirname "$0")/.." && pwd)"
 cd "${repo_root}"
 
+# Load .env if available
+if [ -f "${repo_root}/.env" ]; then
+  set -a
+  # shellcheck disable=SC1090
+  source "${repo_root}/.env"
+  set +a
+fi
+
 if [ -f /opt/ros/humble/setup.bash ]; then
   # shellcheck disable=SC1091
   set +u

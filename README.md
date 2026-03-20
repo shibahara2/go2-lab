@@ -54,11 +54,21 @@ uvx --from vcstool vcs import --force < go2.repos
 `TARGET` は `jetson` / `bridge` / `visualization-host` の配備対象を表します。
 このうち Docker で管理するのは `jetson` と `bridge` のみです。
 `visualization-host` はホスト上でネイティブに運用します。
-初回セットアップ時は、`configs/` 配下の正本を `src/` 配下へ反映するために `make sync-configs` を先に実行します。
+初回セットアップ時は、`configs/` 配下の正本を `src/` 配下へ反映するために `make sync-configs TARGET=<target>` を先に実行します。
+
+全変数はターゲット別 `.env.<target>` で管理します。
+初回は `.env.<target>.example` をコピーして必要に応じて編集してください。
+
+| ターゲット | `.env.<target>.example` | デフォルト `NETWORK_INTERFACE` |
+|---|---|---|
+| jetson | `.env.jetson.example` | `eth0` |
+| bridge | `.env.bridge.example` | `eno1` |
+| visualization-host | `.env.visualization-host.example` | `wlp0s20f3` |
 
 ### jetson
 ```bash
-make sync-configs
+cp .env.jetson.example .env.jetson
+make sync-configs TARGET=jetson
 make build TARGET=jetson
 make up TARGET=jetson
 make shell TARGET=jetson
@@ -66,7 +76,8 @@ make shell TARGET=jetson
 
 ### bridge
 ```bash
-make sync-configs
+cp .env.bridge.example .env.bridge
+make sync-configs TARGET=bridge
 make build TARGET=bridge
 make up TARGET=bridge
 make shell TARGET=bridge
@@ -116,13 +127,13 @@ make target-build
 
 ```bash
 make shell TARGET=bridge
-src/zenoh/target/release/zenohd -c zenoh-config-router.json
+src/zenoh/target/release/zenohd -c configs/zenoh/zenoh-config-router.json
 ```
 
 ### 7.2 Jetson: zenoh client 起動
 
 ```bash
-src/zenoh/target/release/zenohd -c zenoh-config-client.json
+src/zenoh/target/release/zenohd -c configs/zenoh/zenoh-config-client.json
 ```
 
 ### 7.3 Jetson: Livoxドライバ起動
@@ -153,35 +164,60 @@ RVizの目安:
   - `/tf`
   - `/tf_static`
 
-## 8. zenoh 設定ファイル
+## 8. 環境変数と設定ファイル
 
-- Jetson(client): `zenoh-config-client.json`
-  - `connect.endpoints`: `tcp/135.149.56.251:7447`
-  - `plugins.ros2dds.domain`: `0`
+全変数は `.env.<target>` の 1 ファイルで管理します。
+`make sync-configs TARGET=<target>` を実行すると、`configs/` 配下のテンプレートに変数が展開されます。
+
+### 8.1 変数の反映先一覧
+
+| 変数 | 反映先 | 用途 |
+|---|---|---|
+| `ZENOH_ROUTER_IP` | `configs/zenoh/zenoh-config-client.json` | zenoh client の接続先 IP |
+| `ZENOH_ROUTER_PORT` | `configs/zenoh/zenoh-config-client.json`, `configs/zenoh/zenoh-config-router.json` | zenoh の待受/接続ポート |
+| `NETWORK_INTERFACE` | `src/ros/unitree_ros2/setup.sh` | CycloneDDS の `NetworkInterface name` |
+| `LIDAR_HOST_IP` | `src/ros/livox_ros_driver2/config/MID360_config.json` | LiDAR からのデータ受信先（ホスト側） |
+| `LIDAR_DEVICE_IP` | `src/ros/livox_ros_driver2/config/MID360_config.json` | LiDAR 本体の IP |
+| `RMW_IMPLEMENTATION` | `src/ros/unitree_ros2/setup.sh`, `docker-compose.yml` | ROS 2 ミドルウェア実装 |
+| `ROS_DOMAIN_ID` | `docker-compose.yml` | ROS 2 ドメイン ID |
+| `DOCKER_SHM_SIZE` | `docker-compose.yml` | Jetson コンテナの共有メモリサイズ |
+| `LIDAR_DATASET_PATH` | `docker-compose.yml` | Jetson コンテナにマウントするデータパス |
+
+### 8.2 sync-configs の展開対象
+
+`src/` 配下の反映先は直接編集せず、必ず `configs/` 側を編集してから同期します。
+
+| テンプレート | 展開先 | 使用する変数 |
+|---|---|---|
+| `configs/livox/MID360_config.json` | `src/ros/livox_ros_driver2/config/MID360_config.json` | `LIDAR_HOST_IP`, `LIDAR_DEVICE_IP` |
+| `configs/unitree_ros2/setup.sh` | `src/ros/unitree_ros2/setup.sh` | `NETWORK_INTERFACE`, `RMW_IMPLEMENTATION` |
+| `configs/zenoh/zenoh-config-client.json.tmpl` | `configs/zenoh/zenoh-config-client.json` | `ZENOH_ROUTER_IP`, `ZENOH_ROUTER_PORT` |
+| `configs/zenoh/zenoh-config-router.json.tmpl` | `configs/zenoh/zenoh-config-router.json` | `ZENOH_ROUTER_PORT` |
+
+```bash
+make sync-configs TARGET=<target>
+```
+
+### 8.3 docker-compose.yml への反映
+
+`docker-compose.yml` は `env_file` ディレクティブで `.env.<target>` を直接読み込みます。
+`RMW_IMPLEMENTATION`, `ROS_DOMAIN_ID`, `DOCKER_SHM_SIZE`, `LIDAR_DATASET_PATH` はコンテナの環境変数・設定として注入されます。
+
+- `ROS_LOCALHOST_ONLY=1` は bridge コンテナのみ `docker-compose.yml` にハードコードされています（Jetson 側では設定しません）。
+
+### 8.4 zenoh 設定ファイル
+
+- Jetson(client): `configs/zenoh/zenoh-config-client.json`
+  - `connect.endpoints`: `tcp/${ZENOH_ROUTER_IP}:${ZENOH_ROUTER_PORT}`
   - `plugins.ros2dds.ros_localhost_only`: `false`
 
-- 中継PC(router): `zenoh-config-router.json`
-  - `listen.endpoints`: `tcp/0.0.0.0:7447`
-  - `plugins.ros2dds.domain`: `0`
+- 中継PC(router): `configs/zenoh/zenoh-config-router.json`
+  - `listen.endpoints`: `tcp/0.0.0.0:${ZENOH_ROUTER_PORT}`
   - `plugins.ros2dds.ros_localhost_only`: `true`
 
 ## 9. 構成を変更した場合
 
-`make sync-configs` は初回セットアップではコンテナ作成前に実行します。
-それ以降は、`configs/` 配下の設定を変更したときだけ再実行してください。
-`src/` 配下の反映先は直接編集せず、必ず `configs/` 側を編集してから同期します。
-
-- `configs/livox/MID360_config.json`
-  - 反映先: `src/ros/livox_ros_driver2/config/MID360_config.json`
-  - 変更対象: LiDAR の IP/Port
-
-- `configs/unitree_ros2/setup.sh`
-  - 反映先: `src/ros/unitree_ros2/setup.sh`
-  - 変更対象: `source /opt/ros/humble/setup.bash` と `CYCLONEDDS_URI` 内の `NetworkInterface name`
-
-```bash
-make sync-configs
-```
+`.env.<target>` を編集してから `make sync-configs TARGET=<target>` を再実行してください。
 
 ### 9.1 ビルド対象
 
@@ -189,31 +225,6 @@ ROS パッケージは `src/ros` 配下を、Rust ワークスペースは `src/
 
 `make colcon-build` / `make zenoh-build` / `make target-build` は Docker を使わない `visualization-host` でも利用できます。
 将来 Docker ターゲットを増やす場合は `docker-compose.yml` にサービスとプロファイルを追加し、`Makefile` の `DOCKER_TARGETS` に名前を追加します。
-
-### 9.2 環境変数メモ（調査中）
-
-この節の内容は現行構成の調査メモです。運用ルールとして確定していないため、必要に応じて実機設定と `docker/docker-compose.yml` を再確認してください。
-
-- `make up TARGET=<target>` で起動するコンテナには `docker/docker-compose.yml` から環境変数が注入されます。
-- `RMW_IMPLEMENTATION=rmw_cyclonedds_cpp` は Jetson / bridge の両方で設定されています。
-- `ROS_DOMAIN_ID` は Jetson / bridge / 可視化PCホストで同じ値を使います。変更したい場合は `.env` を作るか、起動時に一時上書きします。
-- `ROS_LOCALHOST_ONLY=1` は bridge と可視化PCホストで設定し、Jetson 側では設定しません。
-
-```bash
-cp .env.example .env
-# 必要なら ROS_DOMAIN_ID を変更
-```
-
-```bash
-ROS_DOMAIN_ID=5 make up TARGET=jetson
-ROS_DOMAIN_ID=5 make up TARGET=bridge
-```
-
-現在の値はコンテナ内、またはホストシェルで確認できます。
-
-```bash
-printenv RMW_IMPLEMENTATION ROS_LOCALHOST_ONLY ROS_DOMAIN_ID
-```
 
 ## 10. トラブルシュート
 
@@ -233,7 +244,10 @@ printenv RMW_IMPLEMENTATION ROS_LOCALHOST_ONLY ROS_DOMAIN_ID
 - `unitree_ros2`トピックが見えない:
   - Jetson コンテナで `ROS_LOCALHOST_ONLY` を設定していないことを確認
   - `ros2 daemon stop`を実行してキャッシュを削除する
-  
+
 - zenoh越しにトピックが見えない:
   - 可視化PCホストで `ros2 topic list` に現れるのは、その時点で publisher / subscriber の実体が存在して、zenoh の route が成立している topic
   - `unitree_ros2` の topic は特殊で、ロボットから直接 DDS が送られており publisher はないので、可視化PCホストで subscriber を作らないと現れない
+
+- `make livox-sdk-install`がエラーになる
+  - `src/Livox-SDK2/build`を削除する

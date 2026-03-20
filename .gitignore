@@ -5,8 +5,12 @@
 /src/Livox-SDK2/
 /src/zenoh/
 /src/zenoh-plugin-ros2dds/
-.env
+.env.jetson
+.env.bridge
+.env.visualization-host
 docker/.env
+configs/zenoh/zenoh-config-client.json
+configs/zenoh/zenoh-config-router.json
 *~
 /install
 /build
