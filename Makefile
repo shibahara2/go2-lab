@@ -1,5 +1,5 @@
 TARGET ?= jetson
-DOCKER_COMPOSE = docker compose -f docker/docker-compose.yml
+DOCKER_COMPOSE = docker compose -f $(CURDIR)/docker/docker-compose.yml
 SYNC_CONFIGS = ./scripts/sync_configs.sh
 VISUALIZATION_HOST_SHELL = ./scripts/visualization_host_shell.sh
 ROS_SRC_PREFIX = src/ros/
