@@ -232,7 +232,39 @@ ROS パッケージは `src/ros` 配下を、Rust ワークスペースは `src/
 `make colcon-build` / `make zenoh-build` / `make target-build` は Docker を使わない `visualization-host` でも利用できます。
 将来 Docker ターゲットを増やす場合は `docker-compose.yml` にサービスとプロファイルを追加し、`Makefile` の `DOCKER_TARGETS` に名前を追加します。
 
-## 10. トラブルシュート
+## 10. Jetson への SSH 接続 (zellij)
+
+Jetson での作業は複数ターミナルが必要です。zellij レイアウトを使って一発で4分割 SSH 接続を開けます。
+
+### 10.1 初回セットアップ
+
+SSH 公開鍵を Jetson に登録します（パスワード入力は1回だけ）。
+
+```bash
+ssh-copy-id go2
+```
+
+### 10.2 使い方
+
+zellij 内で以下を実行すると、4分割の新しいタブが開き、各ペインが `ssh go2` で接続されます。
+
+```bash
+go2ssh
+```
+
+このエイリアスは `~/.zshrc` で定義されており、内部では以下を実行しています。
+
+```bash
+zellij action new-tab --layout go2
+```
+
+レイアウト定義: `~/.config/zellij/layouts/go2.kdl`
+
+### 10.3 SSH 設定
+
+`~/.ssh/config` に SSH multiplexing が設定されています。2本目以降の SSH 接続は既存の接続を再利用するため高速です。
+
+## 11. トラブルシュート
 
 ### zenoh router が `does not match an available interface` で落ちる
 
@@ -287,3 +319,21 @@ make sync-configs TARGET=bridge
 
 - `make livox-sdk-install`がエラーになる
   - `src/Livox-SDK2/build`を削除する
+
+# MEMO
+/livox/lidarをrviz表示
+ros2 launch livox_ros_driver2 rviz_MID360_launch.py
+❯ rvizで/livox/lidarのディスプレイを設定できたが、fixed frameにmapしか表示されない
+
+● Fixed Frame のドロップダウンは TF ツリー（/tf, /tf_static）に存在するフレームのみ表示します。Livox
+   ドライバは点群ヘッダーに frame_id: livox_frame を設定しますが、TF に livox_frame フレームを
+  publish していないため、ドロップダウンには出ません。
+
+  解決方法: Fixed Frame の入力欄にドロップダウンから選ぶのではなく、直接 livox_frame
+  と手入力してください。
+
+  TF に存在しなくても、点群の frame_id と Fixed Frame が一致すれば点群は表示されます。
+
+ros2 launch livox_ros_driver2 msg_MID360_launch.pyとすることで、fast-lioに点群を渡す。
+ros2 topic echoやrvizで生点群を見ることはできなくなる。
+fast-lioの出力の点群である/cloud-registeredはかなりsparceで、原因を調査中。
