@@ -2,7 +2,7 @@
  * This example demonstrates how to use ROS2 to receive wireless controller states of unitree go2 robot
  **/
 #include "rclcpp/rclcpp.hpp"
-#include "unitree_go/msg//wireless_controller.hpp"
+#include "unitree_go/msg/wireless_controller.hpp"
 
 using std::placeholders::_1;
 

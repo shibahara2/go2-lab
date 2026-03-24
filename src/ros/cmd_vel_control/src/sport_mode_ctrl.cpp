@@ -9,11 +9,11 @@
 #include "common/ros2_sport_client.h"
 
 using std::placeholders::_1;
-// Create a soprt_request class for soprt commond request
-class soprt_request : public rclcpp::Node
+// Create a SportRequest class for sport command request
+class SportRequest : public rclcpp::Node
 {
 public:
-    soprt_request() : Node("req_sender")
+    SportRequest() : Node("req_sender")
     {
         // the state_suber is set to subscribe "sportmodestate" topic
         state_suber = this->create_subscription<unitree_go::msg::SportModeState>(
@@ -100,9 +100,7 @@ private:
 int main(int argc, char *argv[])
 {
     rclcpp::init(argc, argv); // Initialize rclcpp
-    rclcpp::TimerBase::SharedPtr timer_; // Create a timer callback object to send sport request in time intervals
-
-    rclcpp::spin(std::make_shared<soprt_request>()); //Run ROS2 node
+    rclcpp::spin(std::make_shared<SportRequest>()); // Run ROS2 node
 
     rclcpp::shutdown();
     return 0;

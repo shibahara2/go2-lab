@@ -20,12 +20,7 @@ RUN git clone https://github.com/zsh-users/zsh-autosuggestions.git ${ZSH_CUSTOM:
     apt-get install -y zsh-syntax-highlighting
 
 # configure zsh
-RUN echo 'export ZSH=$HOME/.oh-my-zsh' >> ~/.zshrc && \
-    echo 'ZSH_THEME="ys"' >> ~/.zshrc && \
-    echo 'plugins=(git zsh-autosuggestions)' >> ~/.zshrc && \
-    echo 'source $ZSH/oh-my-zsh.sh' >> ~/.zshrc && \
-    echo 'source /usr/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh' >> ~/.zshrc && \
-    echo 'bindkey -v' >> ~/.zshrc
+COPY docker/.zshrc /root/.zshrc
 
 WORKDIR /workspace
 CMD ["zsh"]

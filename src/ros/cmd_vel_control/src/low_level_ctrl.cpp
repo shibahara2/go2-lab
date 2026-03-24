@@ -75,7 +75,6 @@ private:
 int main(int argc, char **argv)
 {
     rclcpp::init(argc, argv);                             // Initialize rclcpp
-    rclcpp::TimerBase::SharedPtr timer_;                  // Create a timer callback object to send cmd in time intervals
     auto node = std::make_shared<low_level_cmd_sender>(); // Create a ROS2 node and make share with low_level_cmd_sender class
     rclcpp::spin(node);                                   // Run ROS2 node
     rclcpp::shutdown();                                   // Exit

@@ -1,11 +1,15 @@
+x-common: &common
+  network_mode: "host"
+  command: /bin/zsh -c "while sleep 1000; do :; done"
+
 services:
   bridge:
+    <<: *common
     profiles: ["bridge"]
     platform: linux/amd64
     volumes:
       - ..:/workspace:cached
     env_file: ../.env.bridge
-    command: /bin/zsh -c "while sleep 1000; do :; done"
     build:
       context: ..
       dockerfile: docker/Dockerfile
@@ -13,11 +17,15 @@ services:
         BASE_IMAGE: osrf/ros:humble-desktop-full
     image: go2-lab:bridge
     container_name: bridge
-    network_mode: "host"
 
   jetson:
+    <<: *common
     profiles: ["jetson"]
     platform: linux/arm64
+    volumes:
+      - ..:/workspace:cached
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+    env_file: ../.env.jetson
     build:
       context: ..
       dockerfile: docker/Dockerfile
@@ -26,18 +34,5 @@ services:
       network: host
     image: go2-lab:jetson
     container_name: jetson
-    stdin_open: true
-    tty: true
-    network_mode: "host"
     ipc: "host"
-    shm_size: "${DOCKER_SHM_SIZE:-4gb}"
     runtime: nvidia
-    env_file: ../.env.jetson
-    dns:
-      - 8.8.8.8
-      - 1.1.1.1
-    working_dir: /workspace
-    volumes:
-      - ..:/workspace:cached
-      - /tmp/.X11-unix:/tmp/.X11-unix:rw
-    command: /bin/zsh -c "while sleep 1000; do :; done"
