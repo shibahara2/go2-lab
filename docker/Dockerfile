@@ -1,6 +1,5 @@
 ARG BASE_IMAGE
 FROM ${BASE_IMAGE}
-SHELL ["/bin/zsh", "-c"]
 ENV DEBIAN_FRONTEND=noninteractive
 
 USER root
@@ -14,6 +13,8 @@ RUN apt-get update && \
 RUN apt-get install -y zsh wget && \
     wget -O /tmp/install.sh https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh && \
     chmod +x /tmp/install.sh && /tmp/install.sh && rm /tmp/install.sh
+
+SHELL ["/bin/zsh", "-c"]
 
 # install zsh plugins
 RUN git clone https://github.com/zsh-users/zsh-autosuggestions.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-autosuggestions && \
