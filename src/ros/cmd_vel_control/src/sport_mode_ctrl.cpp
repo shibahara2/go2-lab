@@ -17,10 +17,10 @@ public:
     {
         // the state_suber is set to subscribe "sportmodestate" topic
         state_suber = this->create_subscription<unitree_go::msg::SportModeState>(
-            "sportmodestate", 10, std::bind(&soprt_request::state_callback, this, _1));
+            "sportmodestate", 10, std::bind(&SportRequest::state_callback, this, _1));
         // the req_puber is set to subscribe "/api/sport/request" topic with dt
         req_puber = this->create_publisher<unitree_api::msg::Request>("/api/sport/request", 10);
-        timer_ = this->create_wall_timer(std::chrono::milliseconds(int(dt * 1000)), std::bind(&soprt_request::timer_callback, this));
+        timer_ = this->create_wall_timer(std::chrono::milliseconds(int(dt * 1000)), std::bind(&SportRequest::timer_callback, this));
 
         t = -1; // Runing time count
     };
