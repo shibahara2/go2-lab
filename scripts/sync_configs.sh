@@ -5,16 +5,16 @@ target="${1:?Usage: $0 <TARGET> (jetson|bridge|visualization-host)}"
 
 repo_root="$(cd "$(dirname "$0")/.." && pwd)"
 
-# Load target env
-target_env="${repo_root}/.env.${target}"
-if [[ ! -f "${target_env}" ]]; then
-  echo "Error: .env.${target} not found." >&2
-  echo "Run: cp .env.${target}.example .env.${target}" >&2
+# Load shared env
+env_file="${repo_root}/.env"
+if [[ ! -f "${env_file}" ]]; then
+  echo "Error: .env not found." >&2
+  echo "Run: cp .env.example .env" >&2
   exit 1
 fi
 # shellcheck disable=SC1090
 set -a
-source "${target_env}"
+source "${env_file}"
 set +a
 
 render_file() {

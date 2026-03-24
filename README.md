@@ -60,20 +60,22 @@ uvx --from vcstool vcs import --force < go2.repos
 このうち Docker で管理するのは `jetson` と `bridge` のみです。
 `visualization-host` はホスト上でネイティブに運用します。
 初回セットアップ時は、`configs/` 配下の正本を `src/` 配下へ反映するために `make sync-configs TARGET=<target>` を先に実行します。
+各ホストの設定は単一の `.env` で管理します。
+`TARGET` は env ファイルの切り替えではなく、同期先と実行対象の切り替えにだけ使います。
+`configs/fast_lio/mid360.yaml` は target 非依存の共有設定として同じ内容を同期します。
 
-全変数はターゲット別 `.env.<target>` で管理します。
-初回は `.env.<target>.example` をコピーして必要に応じて編集してください。
+初回は `.env.example` を `.env` にコピーして必要に応じて編集してください。
 
-| ターゲット | `.env.<target>.example` | デフォルト `NETWORK_INTERFACE` |
+| ターゲット | 使う env | `NETWORK_INTERFACE` の考え方 |
 |---|---|---|
-| jetson | `.env.jetson.example` | `eth0` |
-| bridge | `.env.bridge.example` | `CHANGE_ME` |
-| visualization-host | `.env.visualization-host.example` | `wlp0s20f3` |
+| jetson | `.env` | Jetson 上で実在する IF 名 |
+| bridge | `.env` | bridge ホスト上で実在する IF 名 |
+| visualization-host | `.env` | 可視化 PC 上で実在する IF 名 |
 
 ### jetson
 
 ```bash
-cp .env.jetson.example .env.jetson
+cp .env.example .env
 make sync-configs TARGET=jetson
 make build TARGET=jetson
 make up TARGET=jetson
@@ -83,8 +85,8 @@ make shell TARGET=jetson
 ### bridge
 
 ```bash
-cp .env.bridge.example .env.bridge
-# Linux bridge ホストで実在する IF 名を確認して .env.bridge の NETWORK_INTERFACE を更新
+cp .env.example .env
+# Linux bridge ホストで実在する IF 名を確認して .env の NETWORK_INTERFACE を更新
 # 例: ip link show
 # 例: ifconfig
 make sync-configs TARGET=bridge
@@ -124,7 +126,7 @@ make livox-sdk-install
 ビルドコマンド (`colcon-build` / `zenoh-build` / `target-build`) は TARGET に依存しません。
 
 ```bash
-make shell TARGET=<target>         # target: jetson / bridge TODO: visualization-hostで環境変数セットやsourceを行う
+make shell TARGET=<target>         # target: jetson / bridge / visualization-host
 make target-build
 ```
 
@@ -182,8 +184,9 @@ RVizの目安:
 
 ## 8. 環境変数と設定ファイル
 
-全変数は `.env.<target>` の 1 ファイルで管理します。
+全変数は `.env` の 1 ファイルで管理します。
 `make sync-configs TARGET=<target>` を実行すると、`configs/` 配下のテンプレートに変数が展開されます。
+ただし、`configs/fast_lio/mid360.yaml` は変数展開なしの共有設定ファイルとしてそのままコピーされます。
 
 ### 8.1 変数の反映先一覧
 
@@ -202,6 +205,7 @@ RVizの目安:
 ### 8.2 sync-configs の展開対象
 
 `src/` 配下の反映先は直接編集せず、必ず `configs/` 側を編集してから同期します。
+`TARGET` は env ファイルの選択には使わず、同期先の選択にだけ使います。`configs/fast_lio/mid360.yaml` は Jetson で使う FAST_LIO 設定を target 非依存の共通ファイルとして同期します。
 
 | テンプレート | 展開先 | 使用する変数 |
 |---|---|---|
@@ -217,7 +221,7 @@ make sync-configs TARGET=<target>
 
 ### 8.3 docker-compose.yml への反映
 
-`docker-compose.yml` は `env_file` ディレクティブで `.env.<target>` を直接読み込みます。
+`docker-compose.yml` は `env_file` ディレクティブで `.env` を直接読み込みます。
 `RMW_IMPLEMENTATION`, `ROS_DOMAIN_ID`, `DOCKER_SHM_SIZE`, `LIDAR_DATASET_PATH` はコンテナの環境変数・設定として注入されます。
 
 - `ROS_LOCALHOST_ONLY=1` は bridge コンテナのみ `docker-compose.yml` にハードコードされています（Jetson 側では設定しません）。
@@ -234,7 +238,7 @@ make sync-configs TARGET=<target>
 
 ## 9. 構成を変更した場合
 
-`.env.<target>` を編集してから `make sync-configs TARGET=<target>` を再実行してください。
+`.env` を編集してから `make sync-configs TARGET=<target>` を再実行してください。
 
 ### 9.1 ビルド対象
 
@@ -298,7 +302,7 @@ ip link show
 ifconfig
 ```
 
-`.env.bridge` の `NETWORK_INTERFACE` を、実在する IF 名に合わせて修正してください。
+`.env` の `NETWORK_INTERFACE` を、実在する IF 名に合わせて修正してください。
 修正後は設定を再生成します。
 
 ```bash
@@ -349,7 +353,3 @@ ros2 launch livox_ros_driver2 rviz_MID360_launch.py
 ros2 launch livox_ros_driver2 msg_MID360_launch.pyとすることで、fast-lioに点群を渡す。
 ros2 topic echoやrvizで生点群を見ることはできなくなる。
 fast-lioの出力の点群である/cloud-registeredはかなりsparceで、原因を調査中。
-
-# TODO
-
-- make sync-configsでconfigs/fast-lio/mid360.yamlを同期するときtarget指定の意味がない

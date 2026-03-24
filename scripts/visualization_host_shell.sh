@@ -4,10 +4,10 @@ set -euo pipefail
 repo_root="$(cd "$(dirname "$0")/.." && pwd)"
 cd "${repo_root}"
 
-# Load .env.visualization-host if available
-if [ -f "${repo_root}/.env.visualization-host" ]; then
+# Load .env if available
+if [ -f "${repo_root}/.env" ]; then
   set -a
-  source "${repo_root}/.env.visualization-host"
+  source "${repo_root}/.env"
   set +a
 fi
 

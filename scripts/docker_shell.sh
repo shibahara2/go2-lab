@@ -7,7 +7,7 @@ target="${2:?Usage: $0 <project_dir> <target>}"
 docker compose \
   --project-directory "${project_dir}/docker" \
   -f "${project_dir}/docker/docker-compose.yml" \
-  --env-file "${project_dir}/.env.${target}" \
+  --env-file "${project_dir}/.env" \
   exec -w / "${target}" zsh -c '
     cd /workspace
 

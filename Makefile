@@ -1,5 +1,5 @@
 TARGET ?=
-DOCKER_COMPOSE = docker compose -f docker/docker-compose.yml --env-file .env.$(TARGET)
+DOCKER_COMPOSE = docker compose -f docker/docker-compose.yml --env-file .env
 SYNC_CONFIGS = ./scripts/sync_configs.sh
 VISUALIZATION_HOST_SHELL = ./scripts/visualization_host_shell.sh
 ROS_SRC_PREFIX = src/ros/
@@ -68,7 +68,7 @@ shell: require-target
 	fi
 
 sync-configs: require-target
-	@test -f .env.$(TARGET) || { echo "Error: .env.$(TARGET) not found. Run: cp .env.$(TARGET).example .env.$(TARGET)"; exit 1; }
+	@test -f .env || { echo "Error: .env not found. Run: cp .env.example .env"; exit 1; }
 	$(SYNC_CONFIGS) $(TARGET)
 
 colcon-build:
