@@ -62,7 +62,7 @@ uvx --from vcstool vcs import --force < go2.repos
 | ターゲット | `.env.<target>.example` | デフォルト `NETWORK_INTERFACE` |
 |---|---|---|
 | jetson | `.env.jetson.example` | `eth0` |
-| bridge | `.env.bridge.example` | `eno1` |
+| bridge | `.env.bridge.example` | `CHANGE_ME` |
 | visualization-host | `.env.visualization-host.example` | `wlp0s20f3` |
 
 ### jetson
@@ -77,11 +77,17 @@ make shell TARGET=jetson
 ### bridge
 ```bash
 cp .env.bridge.example .env.bridge
+# Linux bridge ホストで実在する IF 名を確認して .env.bridge の NETWORK_INTERFACE を更新
+# 例: ip link show
+# 例: ifconfig
 make sync-configs TARGET=bridge
 make build TARGET=bridge
 make up TARGET=bridge
 make shell TARGET=bridge
 ```
+
+`NETWORK_INTERFACE` は bridge コンテナではなく、`network_mode: host` で共有される Linux ホスト側の IF 名に合わせてください。
+`eno1` / `eth0` / `enp*` など名称は環境依存です。
 
 ### visualization-host
 
@@ -227,6 +233,36 @@ ROS パッケージは `src/ros` 配下を、Rust ワークスペースは `src/
 将来 Docker ターゲットを増やす場合は `docker-compose.yml` にサービスとプロファイルを追加し、`Makefile` の `DOCKER_TARGETS` に名前を追加します。
 
 ## 10. トラブルシュート
+
+### zenoh router が `does not match an available interface` で落ちる
+
+次のようなログ:
+
+```text
+eno1: does not match an available interface
+Failed to create RosDiscoveryInfoMgr
+Error creating DDS Reader on ros_discovery_info: Precondition Not Met
+```
+
+これは `zenohd` 自体の listen 設定ではなく、CycloneDDS が `NETWORK_INTERFACE` に指定された IF 名を見つけられないときに起きます。
+
+確認手順:
+
+```bash
+# bridge を動かす Linux ホストで確認
+ip link show
+# または
+ifconfig
+```
+
+`.env.bridge` の `NETWORK_INTERFACE` を、実在する IF 名に合わせて修正してください。
+修正後は設定を再生成します。
+
+```bash
+make sync-configs TARGET=bridge
+```
+
+その後、`src/ros/unitree_ros2/setup.sh` 内の `NetworkInterface name="..."` が期待どおりか確認してから、bridge コンテナ内で `zenohd` を再起動してください。
 
 - `ros2 topic list` が空:
   - Jetson / bridge / 可視化PCホストの `ROS_DOMAIN_ID` 不一致を確認
