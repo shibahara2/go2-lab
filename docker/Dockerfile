@@ -1,6 +1,6 @@
 ARG BASE_IMAGE
 FROM ${BASE_IMAGE}
-SHELL ["/bin/bash", "-c"]
+SHELL ["/bin/zsh", "-c"]
 ENV DEBIAN_FRONTEND=noninteractive
 
 USER root
@@ -10,6 +10,22 @@ RUN apt-get update && \
     grep -v '^\s*#' /tmp/packages.txt | grep -v '^\s*$' | \
     xargs apt-get install -y
 
+# install zsh and oh-my-zsh
+RUN apt-get install -y zsh wget && \
+    wget -O /tmp/install.sh https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh && \
+    chmod +x /tmp/install.sh && /tmp/install.sh && rm /tmp/install.sh
+
+# install zsh plugins
+RUN git clone https://github.com/zsh-users/zsh-autosuggestions.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-autosuggestions && \
+    apt-get install -y zsh-syntax-highlighting
+
+# configure zsh
+RUN echo 'export ZSH=$HOME/.oh-my-zsh' >> ~/.zshrc && \
+    echo 'ZSH_THEME="ys"' >> ~/.zshrc && \
+    echo 'plugins=(git zsh-autosuggestions)' >> ~/.zshrc && \
+    echo 'source $ZSH/oh-my-zsh.sh' >> ~/.zshrc && \
+    echo 'source /usr/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh' >> ~/.zshrc && \
+    echo 'bindkey -v' >> ~/.zshrc
+
 WORKDIR /workspace
-RUN echo 'set -o vi' >> /root/.bashrc
-CMD ["bash"]
+CMD ["zsh"]

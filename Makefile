@@ -50,22 +50,22 @@ logs: require-docker-target
 
 shell:
 	@if [ "$(TARGET)" = "visualization-host" ]; then \
-		bash $(VISUALIZATION_HOST_SHELL); \
+		zsh $(VISUALIZATION_HOST_SHELL); \
 	elif echo "$(DOCKER_TARGETS)" | grep -qw "$(TARGET)"; then \
-		cd / && docker compose --project-directory $(CURDIR)/docker -f $(CURDIR)/docker/docker-compose.yml --env-file $(CURDIR)/.env.$(TARGET) exec -w / $(TARGET) bash -lc 'cd /workspace; \
+		cd / && docker compose --project-directory $(CURDIR)/docker -f $(CURDIR)/docker/docker-compose.yml --env-file $(CURDIR)/.env.$(TARGET) exec -w / $(TARGET) zsh -c 'cd /workspace; \
 			if [ -f /workspace/src/ros/unitree_ros2/setup.sh ]; then \
 				source /workspace/src/ros/unitree_ros2/setup.sh; \
 				echo "[auto-source] sourced: /workspace/src/ros/unitree_ros2/setup.sh"; \
 			else \
 				echo "[auto-source] missing: /workspace/src/ros/unitree_ros2/setup.sh"; \
 			fi; \
-			if [ -f /workspace/install/setup.bash ]; then \
-				source /workspace/install/setup.bash; \
-				echo "[auto-source] sourced: /workspace/install/setup.bash"; \
+			if [ -f /workspace/install/setup.zsh ]; then \
+				source /workspace/install/setup.zsh; \
+				echo "[auto-source] sourced: /workspace/install/setup.zsh"; \
 			else \
-				echo "[auto-source] missing: /workspace/install/setup.bash"; \
+				echo "[auto-source] missing: /workspace/install/setup.zsh"; \
 			fi; \
-			exec bash -i'; \
+			exec zsh -i'; \
 	else \
 		echo "Unsupported shell TARGET='"'"'$(TARGET)'"'"'."; \
 		echo "Shell is available for: $(ALL_TARGETS)"; \

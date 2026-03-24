@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/env zsh
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "$0")/.." && pwd)"
@@ -7,19 +7,17 @@ cd "${repo_root}"
 # Load .env.visualization-host if available
 if [ -f "${repo_root}/.env.visualization-host" ]; then
   set -a
-  # shellcheck disable=SC1090
   source "${repo_root}/.env.visualization-host"
   set +a
 fi
 
-if [ -f /opt/ros/humble/setup.bash ]; then
-  # shellcheck disable=SC1091
+if [ -f /opt/ros/humble/setup.zsh ]; then
   set +u
-  source /opt/ros/humble/setup.bash
+  source /opt/ros/humble/setup.zsh
   set -u
-  echo "[auto-source] sourced: /opt/ros/humble/setup.bash"
+  echo "[auto-source] sourced: /opt/ros/humble/setup.zsh"
 else
-  echo "[auto-source] missing: /opt/ros/humble/setup.bash"
+  echo "[auto-source] missing: /opt/ros/humble/setup.zsh"
 fi
 
 export RMW_IMPLEMENTATION="${RMW_IMPLEMENTATION:-rmw_cyclonedds_cpp}"
@@ -31,4 +29,4 @@ if [ "$#" -gt 0 ]; then
   exec "$@"
 fi
 
-exec bash -i
+exec zsh -i

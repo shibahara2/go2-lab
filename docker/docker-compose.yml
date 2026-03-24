@@ -5,7 +5,7 @@ services:
     volumes:
       - ..:/workspace:cached
     env_file: ../.env.bridge
-    command: /bin/bash -lc "while sleep 1000; do :; done"
+    command: /bin/zsh -c "while sleep 1000; do :; done"
     build:
       context: ..
       dockerfile: docker/Dockerfile
@@ -40,4 +40,4 @@ services:
     volumes:
       - ..:/workspace:cached
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
-    command: /bin/bash -lc "while sleep 1000; do :; done"
+    command: /bin/zsh -c "while sleep 1000; do :; done"
