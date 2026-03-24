@@ -18,7 +18,7 @@ help:
 	@echo "  make up TARGET=jetson                 # run services in background"
 	@echo "  make shell TARGET=jetson              # enter primary container"
 	@echo "  make shell TARGET=visualization-host  # open host shell with auto env/source"
-	@echo "  make sync-configs TARGET=jetson    # copy tracked config templates into src/"
+	@echo "  make sync-configs TARGET=jetson      # sync tracked configs into src/ and configs/"
 	@echo "  make colcon-build                      # build ROS packages under $(ROS_SRC_PREFIX) only"
 	@echo "  make zenoh-build                       # build $(ZENOH_BUILD_ROOTS)"
 	@echo "  make target-build                      # build ROS + Rust with one command"

@@ -4,8 +4,9 @@
 VPN/インターネット越しに別PC(Ubuntu)のホスト環境で RViz2 を可視化するための手順をまとめています。
 
 参照:
-- https://techshare.co.jp/faq/unitree/mid360_slam_fast-lio.html
-- https://github.com/eclipse-zenoh/zenoh-plugin-ros2dds
+
+- <https://techshare.co.jp/faq/unitree/mid360_slam_fast-lio.html>
+- <https://github.com/eclipse-zenoh/zenoh-plugin-ros2dds>
 
 ## 1. 構成
 
@@ -23,16 +24,19 @@ cd go2-lab
 ```
 
 ## 3. 外部リポジトリ取得
+
 依存する外部リポジトリを取得します。
 `go2.repos` は外部リポジトリの一覧ファイルです。
 `vcstool` を用いてその一覧を取得・更新します。
 
 ### 3.1 uv
+
 `vcstool`をインストールするために、Rust製のPythonパッケージ管理ツールである`uv`を利用します。
 `
 [公式ドキュメント](https://docs.astral.sh/uv/getting-started/installation/)に従ってインストールしてください。
 
 ### 3.2 vcstool
+
 ```bash
 uv tool install --with 'setuptools<81' vcstool
 ```
@@ -51,6 +55,7 @@ uvx --from vcstool vcs import --force < go2.repos
 `uvx` は `uv tool run` のエイリアスです。
 
 ## 4. 実行環境構築
+
 `TARGET` は `jetson` / `bridge` / `visualization-host` の配備対象を表します。
 このうち Docker で管理するのは `jetson` と `bridge` のみです。
 `visualization-host` はホスト上でネイティブに運用します。
@@ -66,6 +71,7 @@ uvx --from vcstool vcs import --force < go2.repos
 | visualization-host | `.env.visualization-host.example` | `wlp0s20f3` |
 
 ### jetson
+
 ```bash
 cp .env.jetson.example .env.jetson
 make sync-configs TARGET=jetson
@@ -75,6 +81,7 @@ make shell TARGET=jetson
 ```
 
 ### bridge
+
 ```bash
 cp .env.bridge.example .env.bridge
 # Linux bridge ホストで実在する IF 名を確認して .env.bridge の NETWORK_INTERFACE を更新
@@ -103,6 +110,7 @@ make host-deps-install
 ```
 
 ### 共通
+
 初回のみ Livox SDK2 をインストールします。
 
 ```bash
@@ -125,6 +133,7 @@ make target-build
 - `make target-build` は、`make colcon-build` と `make zenoh-build` を一度に行います。
 - `make colcon-build` は、`src/ros` 配下の ROS パッケージを再帰的に探索してビルドします。`bridge` や `visualization-host` では ROS パッケージが無いため no-op です。
 - `make zenoh-build` は、`src/zenoh` と `src/zenoh-plugin-ros2dds` の Rust ワークスペースを `cargo build --release` します。
+
 </details>
 
 ## 7. 起動順
@@ -163,6 +172,7 @@ rviz2
 ```
 
 RVizの目安:
+
 - Fixed Frame: `camera_init`
 - 表示候補:
   - `/cloud_registered`
@@ -196,6 +206,7 @@ RVizの目安:
 | テンプレート | 展開先 | 使用する変数 |
 |---|---|---|
 | `configs/livox/MID360_config.json` | `src/ros/livox_ros_driver2/config/MID360_config.json` | `LIDAR_HOST_IP`, `LIDAR_DEVICE_IP` |
+| `configs/fast_lio/mid360.yaml` | `src/ros/FAST_LIO/config/mid360.yaml` | なし |
 | `configs/unitree_ros2/setup.sh` | `src/ros/unitree_ros2/setup.sh` | `NETWORK_INTERFACE`, `RMW_IMPLEMENTATION` |
 | `configs/zenoh/zenoh-config-client.json.tmpl` | `configs/zenoh/zenoh-config-client.json` | `ZENOH_ROUTER_IP`, `ZENOH_ROUTER_PORT` |
 | `configs/zenoh/zenoh-config-router.json.tmpl` | `configs/zenoh/zenoh-config-router.json` | `ZENOH_ROUTER_PORT` |
@@ -321,6 +332,7 @@ make sync-configs TARGET=bridge
   - `src/Livox-SDK2/build`を削除する
 
 # MEMO
+
 /livox/lidarをrviz表示
 ros2 launch livox_ros_driver2 rviz_MID360_launch.py
 ❯ rvizで/livox/lidarのディスプレイを設定できたが、fixed frameにmapしか表示されない
@@ -337,3 +349,7 @@ ros2 launch livox_ros_driver2 rviz_MID360_launch.py
 ros2 launch livox_ros_driver2 msg_MID360_launch.pyとすることで、fast-lioに点群を渡す。
 ros2 topic echoやrvizで生点群を見ることはできなくなる。
 fast-lioの出力の点群である/cloud-registeredはかなりsparceで、原因を調査中。
+
+# TODO
+
+- make sync-configsでconfigs/fast-lio/mid360.yamlを同期するときtarget指定の意味がない
