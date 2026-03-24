@@ -1,4 +1,4 @@
-TARGET ?= jetson
+TARGET ?=
 DOCKER_COMPOSE = docker compose -f docker/docker-compose.yml --env-file .env.$(TARGET)
 SYNC_CONFIGS = ./scripts/sync_configs.sh
 VISUALIZATION_HOST_SHELL = ./scripts/visualization_host_shell.sh
@@ -7,7 +7,7 @@ ZENOH_BUILD_ROOTS = src/zenoh src/zenoh-plugin-ros2dds
 ALL_TARGETS = jetson bridge visualization-host
 DOCKER_TARGETS = jetson bridge
 
-.PHONY: help build up down ps logs shell sync-configs colcon-build zenoh-build target-build require-docker-target host-deps-install livox-sdk-install
+.PHONY: help build up down ps logs shell sync-configs colcon-build zenoh-build target-build require-target require-docker-target host-deps-install livox-sdk-install
 
 help:
 	@echo "Usage:"
@@ -25,7 +25,15 @@ help:
 	@echo "  make host-deps-install                # install system/ROS packages for host builds"
 	@echo "  # ROS packages are built from $(ROS_SRC_PREFIX), Rust from $(ZENOH_BUILD_ROOTS)"
 
-require-docker-target:
+require-target:
+	@[ -n "$(TARGET)" ] || { \
+		echo "Error: TARGET is required."; \
+		echo "Usage: make <target> TARGET=<value>"; \
+		echo "Available TARGET values: $(ALL_TARGETS)"; \
+		exit 1; \
+	}
+
+require-docker-target: require-target
 	@echo "$(DOCKER_TARGETS)" | grep -qw "$(TARGET)" || { \
 		echo "Unsupported docker TARGET='$(TARGET)'."; \
 		echo "Docker commands are available only for: $(DOCKER_TARGETS)"; \
@@ -48,7 +56,7 @@ ps: require-docker-target
 logs: require-docker-target
 	$(DOCKER_COMPOSE) --profile $(TARGET) logs -f $(TARGET)
 
-shell:
+shell: require-target
 	@if [ "$(TARGET)" = "visualization-host" ]; then \
 		zsh $(VISUALIZATION_HOST_SHELL); \
 	elif echo "$(DOCKER_TARGETS)" | grep -qw "$(TARGET)"; then \
@@ -59,7 +67,7 @@ shell:
 		exit 1; \
 	fi
 
-sync-configs:
+sync-configs: require-target
 	@test -f .env.$(TARGET) || { echo "Error: .env.$(TARGET) not found. Run: cp .env.$(TARGET).example .env.$(TARGET)"; exit 1; }
 	$(SYNC_CONFIGS) $(TARGET)
 
