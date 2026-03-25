@@ -323,18 +323,6 @@ make sync-configs TARGET=bridge
 - Fixed Frame を `camera_init` にする
 - `/cloud_registered` が publish されているか確認する
 - desktop container 側で `ros2 topic echo /Odometry --once` が通るか確認する
-
-### `unitree_ros2` topic が見えない
-
-- `src/ros/unitree_ros2/setup.sh` に反映された `NETWORK_INTERFACE` を確認する
-- `ros2 daemon stop` を実行して discovery キャッシュを消してから再確認する
-
-### zenoh 越しに topic が見えない
-
-- `ZENOH_ROUTER_IP` が mac host の正しい IP を向いているか確認する
-- mac host 側の firewall / port 開放状態を確認する
-- Jetson / desktop の両方で `configs/zenoh/zenoh-config-client.json` が同じ router を向いているか確認する
-=======
 ● Fixed Frame のドロップダウンは TF ツリー（/tf, /tf_static）に存在するフレームのみ表示します。Livox
    ドライバは点群ヘッダーに frame_id: livox_frame を設定しますが、TF に livox_frame フレームを
   publish していないため、ドロップダウンには出ません。
@@ -347,6 +335,17 @@ make sync-configs TARGET=bridge
 ros2 launch livox_ros_driver2 msg_MID360_launch.pyとすることで、fast-lioに点群を渡す。
 ros2 topic echoやrvizで生点群を見ることはできなくなる。
 fast-lioの出力の点群である/cloud-registeredはかなりsparceで、原因を調査中。
+
+### `unitree_ros2` topic が見えない
+
+- `src/ros/unitree_ros2/setup.sh` に反映された `NETWORK_INTERFACE` を確認する
+- `ros2 daemon stop` を実行して discovery キャッシュを消してから再確認する
+
+### zenoh 越しに topic が見えない
+
+- `ZENOH_ROUTER_IP` が mac host の正しい IP を向いているか確認する
+- mac host 側の firewall / port 開放状態を確認する
+- Jetson / desktop の両方で `configs/zenoh/zenoh-config-client.json` が同じ router を向いているか確認する
 
 ## 12. 設計判断: SLAM の実行場所
 
