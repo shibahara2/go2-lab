@@ -353,3 +353,22 @@ ros2 launch livox_ros_driver2 rviz_MID360_launch.py
 ros2 launch livox_ros_driver2 msg_MID360_launch.pyとすることで、fast-lioに点群を渡す。
 ros2 topic echoやrvizで生点群を見ることはできなくなる。
 fast-lioの出力の点群である/cloud-registeredはかなりsparceで、原因を調査中。
+
+## 12. 設計判断: SLAM の実行場所
+
+Jetson に画面がないため RViz2 は Desktop で実行する。では SLAM（FAST-LIO）はどちらで実行すべきか？
+
+### 選択肢
+
+| | A: Jetson で SLAM（現状） | B: Desktop で SLAM |
+|---|---|---|
+| ネットワーク通信量 | 小（~0.5-1 MB/s） | 大（~3-7 MB/s） |
+| 送るデータ | `/cloud_registered`, `/Odometry`, `/path`, TF | `/livox/lidar`（生点群）, `/livox/imu`（高頻度） |
+| 計算負荷の場所 | Jetson | Desktop |
+
+### 結論: Jetson で SLAM を実行（現状維持）
+
+- **通信量が 5-10 倍違う**: 生点群（MID360: ~20,000点/スキャン × 10Hz × 16-32bytes/点）を Zenoh 越しに流すのはボトルネックになりやすい。WiFi 環境では遅延・パケットロスのリスクが高い
+- **FAST-LIO は軽量設計**: 組み込み向けに最適化されており Jetson で十分動作する
+- **リアルタイム性**: SLAM をセンサーに近い場所で処理することで TF やオドメトリの遅延が最小化される。SLAM の遅延はナビゲーションに直接影響する
+- **ネットワーク障害耐性**: 通信が途切れても Jetson 側で SLAM は継続動作し PCD 保存もできる
