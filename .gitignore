@@ -14,3 +14,4 @@ configs/zenoh/zenoh-config-client.json
 /install
 /build
 /log
+*.pcd

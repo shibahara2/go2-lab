@@ -20,6 +20,22 @@ else
   echo "[auto-source] missing: /opt/ros/humble/setup.zsh"
 fi
 
+# Source unitree_ros2/setup.sh to set CYCLONEDDS_URI (network interface config)
+if [ -f "${repo_root}/src/ros/unitree_ros2/setup.sh" ]; then
+  set +u
+  source "${repo_root}/src/ros/unitree_ros2/setup.sh"
+  set -u
+  echo "[auto-source] sourced: src/ros/unitree_ros2/setup.sh"
+fi
+
+# Source colcon workspace overlay for custom message types
+if [ -f "${repo_root}/install/setup.zsh" ]; then
+  set +u
+  source "${repo_root}/install/setup.zsh"
+  set -u
+  echo "[auto-source] sourced: install/setup.zsh"
+fi
+
 export RMW_IMPLEMENTATION="${RMW_IMPLEMENTATION:-rmw_cyclonedds_cpp}"
 export ROS_DOMAIN_ID="${ROS_DOMAIN_ID:-0}"
 echo "[auto-env] exported: RMW_IMPLEMENTATION=${RMW_IMPLEMENTATION}"
