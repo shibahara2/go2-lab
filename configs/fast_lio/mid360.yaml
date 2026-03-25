@@ -33,11 +33,13 @@
             scan_publish_en:  true       # false: close all the point cloud output
             dense_publish_en: true       # false: low down the points number in a global-frame point clouds scan.
             scan_bodyframe_pub_en: true  # true: output the point cloud scans in IMU-body-frame
+            map_en: true
+            effect_map_en: false
 
         # when you use docker, you should enter the absolute path of in docker container
-        map_file_path: "/root/ros2_ws/src/FAST_LIO/PCD/result.pcd" 
+        map_file_path: "/workspace/result.pcd" 
         pcd_save:
-            pcd_save_en: false
+            pcd_save_en: true
             interval: -1                 # how many LiDAR frames saved in each pcd file; 
                                         # -1 : all frames will be saved in ONE pcd file, may lead to memory crash when having too much frames.
         
