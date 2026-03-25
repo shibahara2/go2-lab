@@ -57,6 +57,25 @@ uv tool install --with 'setuptools<81' vcstool
 uvx --from vcstool vcs import --force < go2.repos
 ```
 
+### 3.4 外部リポジトリのローカル変更管理
+
+`src/` 配下の外部リポジトリは `go2-lab` の git では直接追跡しません。  
+外部リポジトリにローカル変更を入れた場合は、`go2-lab` 側の patch として記録して管理します。
+
+- patch 適用: 外部リポジトリを取得し直したあと、`go2-lab` 管理の差分を再適用する
+- patch 記録: 外部リポジトリを編集したあと、その差分を `go2-lab` 配下の `patches/` に保存する
+
+```bash
+# go2.repos 取得後に patch を再適用
+make apply-patches
+
+# 外部リポジトリのローカル差分を patch に記録
+make record-patches
+```
+
+現状は `src/ros/FAST_LIO` の差分を `patches/fast_lio/0001-local-changes.patch` で管理します。  
+`make record-patches` は `src/ros/FAST_LIO` の未 commit 差分から patch を自動生成し、差分が空なら patch を削除します。
+
 ## 4. 実行環境構築
 
 各 Linux マシンで `.env.example` を `.env` にコピーして編集します。  
