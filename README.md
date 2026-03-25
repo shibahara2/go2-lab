@@ -366,3 +366,132 @@ Jetson に画面がないため RViz2 は Desktop で実行する。では SLAM�
 - **FAST-LIO は軽量設計**: 組み込み向けに最適化されており Jetson で十分動作する
 - **リアルタイム性**: SLAM をセンサーに近い場所で処理することで TF やオドメトリの遅延が最小化される。SLAM の遅延はナビゲーションに直接影響する
 - **ネットワーク障害耐性**: 通信が途切れても Jetson 側で SLAM は継続動作し PCD 保存もできる
+
+### 主要トピックの計測結果
+
+| トピック | 周波数 (Hz) | メッセージサイズ (MB) | 帯域 (MB/s) | 備考 |
+|---|---|---|---|---|
+| `/Laser_map` | ~1 | ~28.5–30.7 | ~25–27 | 累積地図。サイズは時間とともに増加 |
+| `/livox/lidar` | ~10 | ~0.52 | ~5.3 | MID360 生点群 |
+| `/cloud_registered` | ~10 | ~0.22 | ~2.3 | FAST-LIO 出力（位置合わせ済み点群） |
+
+<details><summary>計測生データ</summary>
+
+- /Laser_mapについて
+  ```
+  $ ros2 topic hz /Laser_map
+average rate: 0.999
+        min: 1.000s max: 1.002s std dev: 0.00074s window: 2
+average rate: 0.999
+        min: 1.000s max: 1.002s std dev: 0.00061s window: 3
+average rate: 0.998
+        min: 1.000s max: 1.003s std dev: 0.00121s window: 4
+average rate: 0.999
+        min: 0.999s max: 1.003s std dev: 0.00157s window: 6
+average rate: 0.999
+        min: 0.999s max: 1.003s std dev: 0.00146s window: 7
+average rate: 0.999
+        min: 0.999s max: 1.003s std dev: 0.00138s window: 9
+average rate: 0.999
+        min: 0.999s max: 1.003s std dev: 0.00131s window: 10
+average rate: 0.999
+        min: 0.998s max: 1.003s std dev: 0.00148s window: 12
+average rate: 0.999
+        min: 0.997s max: 1.005s std dev: 0.00215s window: 14
+average rate: 0.999
+        min: 0.997s max: 1.005s std dev: 0.00208s window: 15
+average rate: 0.999
+        min: 0.997s max: 1.006s std dev: 0.00244s window: 17
+average rate: 0.999
+        min: 0.997s max: 1.006s std dev: 0.00245s window: 19
+average rate: 0.999
+        min: 0.997s max: 1.006s std dev: 0.00240s window: 20
+average rate: 0.999
+        min: 0.997s max: 1.006s std dev: 0.00249s window: 21
+^C#
+# root @ ubuntu in /workspace [11:38:15] C:2
+$ ros2 topic bw /Laser_map
+Subscribed to [/Laser_map]
+57.04 MB/s from 2 messages
+        Message size mean: 28.56 MB min: 28.45 MB max: 28.68 MB
+28.59 MB/s from 2 messages
+        Message size mean: 28.56 MB min: 28.45 MB max: 28.68 MB
+19.06 MB/s from 2 messages
+        Message size mean: 28.56 MB min: 28.45 MB max: 28.68 MB
+21.60 MB/s from 3 messages
+        Message size mean: 28.82 MB min: 28.45 MB max: 29.34 MB
+17.30 MB/s from 3 messages
+        Message size mean: 28.82 MB min: 28.45 MB max: 29.34 MB
+24.27 MB/s from 5 messages
+        Message size mean: 29.16 MB min: 28.45 MB max: 29.78 MB
+25.10 MB/s from 6 messages
+        Message size mean: 29.30 MB min: 28.45 MB max: 30.00 MB
+25.73 MB/s from 7 messages
+        Message size mean: 29.43 MB min: 28.45 MB max: 30.22 MB
+26.25 MB/s from 8 messages
+        Message size mean: 29.56 MB min: 28.45 MB max: 30.43 MB
+26.69 MB/s from 9 messages
+        Message size mean: 29.68 MB min: 28.45 MB max: 30.65 MB
+  ```
+
+- /livox/lidarについて
+  ```
+  $ ros2 topic hz /livox/lidar
+average rate: 9.943
+        min: 0.098s max: 0.104s std dev: 0.00183s window: 12
+average rate: 9.980
+        min: 0.097s max: 0.104s std dev: 0.00195s window: 23
+average rate: 9.994
+        min: 0.097s max: 0.104s std dev: 0.00190s window: 34
+average rate: 9.990
+        min: 0.096s max: 0.106s std dev: 0.00241s window: 45
+average rate: 9.988
+        min: 0.096s max: 0.106s std dev: 0.00233s window: 55
+^C#
+# root @ ubuntu in /workspace [11:41:47] C:2
+$ ros2 topic bw /livox/lidar
+Subscribed to [/livox/lidar]
+5.65 MB/s from 10 messages
+        Message size mean: 0.52 MB min: 0.52 MB max: 0.52 MB
+5.42 MB/s from 20 messages
+        Message size mean: 0.52 MB min: 0.52 MB max: 0.52 MB
+5.34 MB/s from 30 messages
+        Message size mean: 0.52 MB min: 0.52 MB max: 0.52 MB
+5.31 MB/s from 40 messages
+        Message size mean: 0.52 MB min: 0.52 MB max: 0.52 MB
+5.29 MB/s from 50 messages
+        Message size mean: 0.52 MB min: 0.52 MB max: 0.52 MB
+  ```
+
+- /cloud_registeredについて
+  ```
+  $ ros2 topic hz /cloud_registered
+average rate: 9.986
+        min: 0.018s max: 0.179s std dev: 0.04621s window: 11
+average rate: 9.991
+        min: 0.018s max: 0.180s std dev: 0.04402s window: 22
+average rate: 10.055
+        min: 0.009s max: 0.190s std dev: 0.04661s window: 33
+average rate: 10.075
+        min: 0.009s max: 0.190s std dev: 0.04288s window: 44
+average rate: 10.061
+        min: 0.009s max: 0.190s std dev: 0.04332s window: 54
+average rate: 10.075
+        min: 0.009s max: 0.191s std dev: 0.04808s window: 65
+^C#
+# root @ ubuntu in /workspace [11:43:11] C:2
+$ ros2 topic bw /cloud_registered
+Subscribed to [/cloud_registered]
+2.40 MB/s from 10 messages
+        Message size mean: 0.22 MB min: 0.22 MB max: 0.23 MB
+2.32 MB/s from 20 messages
+        Message size mean: 0.22 MB min: 0.22 MB max: 0.23 MB
+2.29 MB/s from 30 messages
+        Message size mean: 0.22 MB min: 0.22 MB max: 0.23 MB
+2.21 MB/s from 39 messages
+        Message size mean: 0.22 MB min: 0.22 MB max: 0.23 MB
+2.25 MB/s from 50 messages
+        Message size mean: 0.22 MB min: 0.21 MB max: 0.23 MB
+  ```
+
+</details>
