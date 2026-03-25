@@ -76,7 +76,3 @@ copy_file "configs/fast_lio/mid360.yaml" \
 render_file "configs/zenoh/zenoh-config-client.json.tmpl" \
   "configs/zenoh/zenoh-config-client.json" \
   '${ZENOH_ROUTER_IP} ${ZENOH_ROUTER_PORT}'
-
-render_file "configs/zenoh/zenoh-config-router.json.tmpl" \
-  "configs/zenoh/zenoh-config-router.json" \
-  '${ZENOH_ROUTER_PORT}'

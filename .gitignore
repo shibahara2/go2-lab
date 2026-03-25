@@ -7,10 +7,9 @@
 /src/zenoh-plugin-ros2dds/
 .env
 .env.jetson
+configs/zenoh/zenoh-config-client.json
 .env.bridge
 .env.visualization-host
-configs/zenoh/zenoh-config-client.json
-configs/zenoh/zenoh-config-router.json
 *~
 /install
 /build
