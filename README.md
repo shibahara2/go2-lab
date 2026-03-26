@@ -218,6 +218,23 @@ RViz の目安:
   - `/tf`
   - `/tf_static`
 
+### 6.7 Go2 IMU publisher 起動
+
+Go2 の `/lowstate` を ROS 標準の `sensor_msgs/msg/Imu` に変換して `/go2/imu` へ配信します。
+
+```bash
+make shell TARGET=<target>   # target: jetson / bridge
+make colcon-build
+source install/setup.bash
+ros2 run imu_publisher imu_publisher
+```
+
+確認例:
+
+```bash
+ros2 topic echo /go2/imu --once
+```
+
 ## 7. 環境変数と設定ファイル
 
 各 clone の `.env` から設定を生成します。  
