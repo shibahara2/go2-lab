@@ -7,7 +7,7 @@ ZENOH_BUILD_ROOTS = src/zenoh src/zenoh-plugin-ros2dds
 ALL_TARGETS = jetson bridge visualization-host
 DOCKER_TARGETS = jetson bridge
 
-.PHONY: help build up down ps logs shell sync-configs apply-patches record-patches colcon-build zenoh-build target-build require-target require-docker-target host-deps-install livox-sdk-install
+.PHONY: help build up down ps logs shell sync-configs apply-patches record-patches colcon-build zenoh-build zenoh-client target-build require-target require-docker-target host-deps-install livox-sdk-install
 
 help:
 	@echo "Usage:"
@@ -23,6 +23,7 @@ help:
 	@echo "  make record-patches                   # record local external-repo diffs into go2-lab patches/"
 	@echo "  make colcon-build                      # build ROS packages under $(ROS_SRC_PREFIX) only"
 	@echo "  make zenoh-build                       # build $(ZENOH_BUILD_ROOTS)"
+	@echo "  make zenoh-client                      # run zenoh client with optional ZENOH_CONFIG_OVERRIDE"
 	@echo "  make target-build                      # build ROS + Rust with one command"
 	@echo "  make host-deps-install                # install system/ROS packages for host builds"
 	@echo "  # ROS packages are built from $(ROS_SRC_PREFIX), Rust from $(ZENOH_BUILD_ROOTS)"
@@ -105,6 +106,9 @@ zenoh-build:
 		echo "cargo build --release ($$p)"; \
 		( cd "$$p" && cargo build --release ); \
 	done
+
+zenoh-client:
+	./scripts/run_zenoh_client.sh
 
 target-build: colcon-build zenoh-build
 

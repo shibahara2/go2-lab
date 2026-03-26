@@ -179,14 +179,14 @@ mac host 上で zenoh router を起動します。
 
 ```bash
 make shell TARGET=jetson
-src/zenoh/target/release/zenohd -c configs/zenoh/zenoh-config-client.json
+make zenoh-client
 ```
 
 ### 6.3 Ubuntu desktop PC: zenoh client 起動
 
 ```bash
 make shell TARGET=bridge
-src/zenoh/target/release/zenohd -c configs/zenoh/zenoh-config-client.json
+make zenoh-client
 ```
 
 ### 6.4 Jetson: Livox ドライバ起動
@@ -229,6 +229,7 @@ RViz の目安:
 |---|---|---|
 | `ZENOH_ROUTER_IP` | `configs/zenoh/zenoh-config-client.json` | mac host 上の zenoh router 接続先 IP |
 | `ZENOH_ROUTER_PORT` | `configs/zenoh/zenoh-config-client.json`, `configs/zenoh/zenoh-config-router.json` | zenoh 接続ポート |
+| `ZENOH_CONFIG_OVERRIDE` | `make zenoh-client` 実行時の環境変数 | zenoh transport の輻輳時 drop 挙動を runtime override する |
 | `NETWORK_INTERFACE` | `src/ros/unitree_ros2/setup.sh` | CycloneDDS の `NetworkInterface name` |
 | `LIDAR_HOST_IP` | `src/ros/livox_ros_driver2/config/MID360_config.json` | LiDAR 受信先 IP |
 | `LIDAR_DEVICE_IP` | `src/ros/livox_ros_driver2/config/MID360_config.json` | LiDAR 本体 IP |
@@ -259,6 +260,14 @@ make sync-configs TARGET=<target>
   - `mode: "client"`
   - `connect.endpoints: ["tcp/${ZENOH_ROUTER_IP}:${ZENOH_ROUTER_PORT}"]`
   - `plugins.ros2dds.ros_localhost_only: false`
+
+`make zenoh-client` は `.env` を読み込み、`ZENOH_CONFIG_OVERRIDE` が設定されていればその値を付けた状態で `zenohd -c configs/zenoh/zenoh-config-client.json` を起動します。
+
+巨大な `PointCloud2` が congestion で drop される疑いがあるときは、`.env` に次を入れてから `make zenoh-client` を起動してください。
+
+```bash
+ZENOH_CONFIG_OVERRIDE=transport/link/tx/queue/congestion_control/drop/wait_before_drop=1000000
+```
 
 `configs/zenoh/zenoh-config-router.json` は Linux 上で router を立てる場合のテンプレートです。  
 現行構成では mac host を router にするため、通常運用では必須ではありません。
