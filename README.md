@@ -93,6 +93,7 @@ Jetson 側の `.env` では、少なくとも以下をその Jetson 環境に合
 
 - `ZENOH_ROUTER_IP`: mac host の到達可能 IP
 - `NETWORK_INTERFACE`: Jetson ホスト上で実在する IF 名
+  - 複数 NIC を使う場合はカンマ区切りで指定できます。例: `eth0,wlan0`
 - `LIDAR_HOST_IP`, `LIDAR_DEVICE_IP`: MID360 実配線に合わせた IP
 
 ```bash
@@ -117,7 +118,7 @@ make up TARGET=bridge
 make shell TARGET=bridge
 ```
 
-`network_mode: host` を使っているため、`NETWORK_INTERFACE` はコンテナ内の仮想 IF ではなく Linux ホスト側の IF 名に合わせてください。
+`network_mode: host` を使っているため、`NETWORK_INTERFACE` はコンテナ内の仮想 IF ではなく Linux ホスト側の IF 名に合わせてください。通常は 1 つで十分ですが、Jetson のように複数 NIC を CycloneDDS に参加させたい場合は `eth0,wlan0` のようにカンマ区切りで指定できます。
 
 確認例:
 
@@ -247,7 +248,7 @@ ros2 topic echo /go2/imu --once
 | `ZENOH_ROUTER_IP` | `configs/zenoh/zenoh-config-client.json` | mac host 上の zenoh router 接続先 IP |
 | `ZENOH_ROUTER_PORT` | `configs/zenoh/zenoh-config-client.json`, `configs/zenoh/zenoh-config-router.json` | zenoh 接続ポート |
 | `ZENOH_CONFIG_OVERRIDE` | `make zenoh-client` 実行時の環境変数 | zenoh transport の輻輳時 drop 挙動を runtime override する |
-| `NETWORK_INTERFACE` | `src/ros/unitree_ros2/setup.sh` | CycloneDDS の `NetworkInterface name` |
+| `NETWORK_INTERFACE` | `src/ros/unitree_ros2/setup.sh` | CycloneDDS の `NetworkInterface name`。複数使う場合はカンマ区切り |
 | `LIDAR_HOST_IP` | `src/ros/livox_ros_driver2/config/MID360_config.json` | LiDAR 受信先 IP |
 | `LIDAR_DEVICE_IP` | `src/ros/livox_ros_driver2/config/MID360_config.json` | LiDAR 本体 IP |
 | `RMW_IMPLEMENTATION` | `src/ros/unitree_ros2/setup.sh`, `docker/docker-compose.yml` | ROS 2 ミドルウェア実装 |
@@ -343,7 +344,7 @@ ip link show
 ifconfig
 ```
 
-`.env` の `NETWORK_INTERFACE` を実在する IF 名に直し、設定を再生成してください。
+`.env` の `NETWORK_INTERFACE` を実在する IF 名に直し、設定を再生成してください。複数指定する場合は `eth0,wlan0` のようにカンマ区切りで指定できます。
 
 ```bash
 make sync-configs TARGET=jetson
