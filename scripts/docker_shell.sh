@@ -25,5 +25,8 @@ docker compose \
       echo "[auto-source] missing: /workspace/install/setup.zsh"
     fi
 
+    # Livox SDK2 install path
+    export LD_LIBRARY_PATH=/usr/local/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}
+
     exec zsh -i
   '
