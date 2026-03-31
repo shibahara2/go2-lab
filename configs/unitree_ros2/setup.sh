@@ -5,12 +5,23 @@ source /opt/ros/humble/setup.zsh
 export RMW_IMPLEMENTATION=${RMW_IMPLEMENTATION}
 
 network_interfaces_raw="${NETWORK_INTERFACE}"
-IFS=',' read -r -a network_interfaces <<< "${network_interfaces_raw}"
 network_interfaces_xml=""
+remaining_interfaces="${network_interfaces_raw}"
 
 # CycloneDDS will later fail with "does not match an available interface"
 # if any configured interface name is wrong for the current host.
-for iface in "${network_interfaces[@]}"; do
+while [ -n "${remaining_interfaces}" ]; do
+  case "${remaining_interfaces}" in
+    *,*)
+      iface="${remaining_interfaces%%,*}"
+      remaining_interfaces="${remaining_interfaces#*,}"
+      ;;
+    *)
+      iface="${remaining_interfaces}"
+      remaining_interfaces=""
+      ;;
+  esac
+
   iface="${iface#"${iface%%[![:space:]]*}"}"
   iface="${iface%"${iface##*[![:space:]]}"}"
 
