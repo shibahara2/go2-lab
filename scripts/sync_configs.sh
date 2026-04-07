@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-target="${1:?Usage: $0 <TARGET> (jetson|bridge|visualization-host)}"
-
 repo_root="$(cd "$(dirname "$0")/.." && pwd)"
 
 # Load shared env

@@ -9,7 +9,7 @@ export RMW_IMPLEMENTATION=${RMW_IMPLEMENTATION}
 if command -v ip >/dev/null 2>&1; then
   if ! ip link show "${NETWORK_INTERFACE}" >/dev/null 2>&1; then
     echo "[setup.sh] Warning: NETWORK_INTERFACE=${NETWORK_INTERFACE} was not found on this host." >&2
-    echo "[setup.sh] Check '.env' and re-run 'make sync-configs TARGET=<target>'." >&2
+    echo "[setup.sh] Check '.env' and re-run 'make sync-configs'." >&2
   fi
 fi
 

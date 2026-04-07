@@ -14,7 +14,8 @@ fi
 
 if [[ "${DISTRIBUTED_MODE:-0}" != "1" ]]; then
   echo "zenoh client is disabled because DISTRIBUTED_MODE=${DISTRIBUTED_MODE:-0}." >&2
-  echo "Default mode is desktop-only. Set DISTRIBUTED_MODE=1 in .env to enable distributed mode." >&2
+  echo "Default mode uses workstation host + optional Jetson container." >&2
+  echo "Set DISTRIBUTED_MODE=1 in .env to enable distributed mode." >&2
   exit 1
 fi
 
@@ -29,7 +30,7 @@ fi
 
 if [[ ! -f "${config_path}" ]]; then
   echo "Missing zenoh client config: ${config_path}" >&2
-  echo "Run 'make sync-configs TARGET=<target>' first." >&2
+  echo "Run 'make sync-configs' first." >&2
   exit 1
 fi
 

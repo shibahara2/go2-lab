@@ -3,21 +3,6 @@ x-common: &common
   command: /bin/zsh -c "while sleep 1000; do :; done"
 
 services:
-  bridge:
-    <<: *common
-    profiles: ["bridge"]
-    platform: linux/amd64
-    volumes:
-      - ..:/workspace:cached
-    env_file: ../.env
-    build:
-      context: ..
-      dockerfile: docker/Dockerfile
-      args:
-        BASE_IMAGE: osrf/ros:humble-desktop-full
-    image: go2-lab:bridge
-    container_name: bridge
-
   jetson:
     <<: *common
     profiles: ["jetson"]

@@ -1,14 +1,13 @@
 #!/usr/bin/env zsh
 set -euo pipefail
 
-project_dir="${1:?Usage: $0 <project_dir> <target>}"
-target="${2:?Usage: $0 <project_dir> <target>}"
+project_dir="${1:?Usage: $0 <project_dir>}"
 
 docker compose \
   --project-directory "${project_dir}/docker" \
   -f "${project_dir}/docker/docker-compose.yml" \
   --env-file "${project_dir}/.env" \
-  exec -w / "${target}" zsh -c '
+  exec -w / jetson zsh -c '
     cd /workspace
 
     if [ -f /workspace/src/ros/unitree_ros2/setup.sh ]; then

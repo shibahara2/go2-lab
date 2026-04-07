@@ -1,27 +1,18 @@
-TARGET ?=
 DOCKER_COMPOSE = docker compose -f docker/docker-compose.yml --env-file .env
 SYNC_CONFIGS = ./scripts/sync_configs.sh
-VISUALIZATION_HOST_SHELL = ./scripts/visualization_host_shell.sh
 ROS_SRC_PREFIX = src/ros/
 ZENOH_BUILD_ROOTS = src/zenoh src/zenoh-plugin-ros2dds
-ALL_TARGETS = jetson bridge visualization-host
-DOCKER_TARGETS = jetson bridge
 
-.PHONY: help build up down ps logs shell sync-configs colcon-build zenoh-build zenoh-client target-build require-target require-docker-target host-deps-install livox-sdk-install
+.PHONY: help build up down ps logs shell sync-configs colcon-build zenoh-build zenoh-client target-build host-deps-install livox-sdk-install
 
 help:
 	@echo "Usage:"
-	@echo "  TARGET values: $(ALL_TARGETS)"
-	@echo "  Docker-capable TARGET values: $(DOCKER_TARGETS)"
-	@echo "  Default mode: DISTRIBUTED_MODE=0 (desktop-only on TARGET=bridge)"
-	@echo "  make build TARGET=bridge              # build desktop services"
-	@echo "  make up TARGET=bridge                 # run desktop services in background"
-	@echo "  make shell TARGET=bridge              # enter desktop container"
-	@echo "  make build TARGET=jetson              # build Jetson services"
-	@echo "  make up TARGET=jetson                 # run Jetson services in background"
-	@echo "  make shell TARGET=jetson              # enter Jetson container"
-	@echo "  make shell TARGET=visualization-host  # open host shell with auto env/source"
-	@echo "  make sync-configs TARGET=bridge       # sync tracked configs into src/ and configs/"
+	@echo "  Default mode: DISTRIBUTED_MODE=0 (workstation host + optional Jetson container)"
+	@echo "  make build                            # build Jetson services"
+	@echo "  make up                               # run Jetson services in background"
+	@echo "  make shell                            # enter Jetson container"
+	@echo "  ./scripts/visualization_host_shell.sh # open host shell with auto env/source"
+	@echo "  make sync-configs                     # sync tracked configs into src/ and configs/"
 	@echo "  make colcon-build                      # build ROS packages under $(ROS_SRC_PREFIX) only"
 	@echo "  make target-build                      # build ROS packages; include zenoh only in distributed mode"
 	@echo "  make zenoh-build                       # distributed mode only"
@@ -29,51 +20,27 @@ help:
 	@echo "  make host-deps-install                # install system/ROS packages for host builds"
 	@echo "  # ROS packages are built from $(ROS_SRC_PREFIX); Rust zenoh workspaces are optional"
 
-require-target:
-	@[ -n "$(TARGET)" ] || { \
-		echo "Error: TARGET is required."; \
-		echo "Usage: make <target> TARGET=<value>"; \
-		echo "Available TARGET values: $(ALL_TARGETS)"; \
-		exit 1; \
-	}
+build:
+	$(DOCKER_COMPOSE) --profile jetson build jetson
 
-require-docker-target: require-target
-	@echo "$(DOCKER_TARGETS)" | grep -qw "$(TARGET)" || { \
-		echo "Unsupported docker TARGET='$(TARGET)'."; \
-		echo "Docker commands are available only for: $(DOCKER_TARGETS)"; \
-		echo "Use colcon-build/zenoh-build/target-build for non-Docker targets."; \
-		exit 1; \
-	}
+up:
+	$(DOCKER_COMPOSE) --profile jetson up -d jetson
 
-build: require-docker-target
-	$(DOCKER_COMPOSE) --profile $(TARGET) build $(TARGET)
+down:
+	$(DOCKER_COMPOSE) --profile jetson down
 
-up: require-docker-target
-	$(DOCKER_COMPOSE) --profile $(TARGET) up -d $(TARGET)
+ps:
+	$(DOCKER_COMPOSE) --profile jetson ps
 
-down: require-docker-target
-	$(DOCKER_COMPOSE) --profile $(TARGET) down
+logs:
+	$(DOCKER_COMPOSE) --profile jetson logs -f jetson
 
-ps: require-docker-target
-	$(DOCKER_COMPOSE) --profile $(TARGET) ps
+shell:
+	$(CURDIR)/scripts/docker_shell.sh $(CURDIR)
 
-logs: require-docker-target
-	$(DOCKER_COMPOSE) --profile $(TARGET) logs -f $(TARGET)
-
-shell: require-target
-	@if [ "$(TARGET)" = "visualization-host" ]; then \
-		zsh $(VISUALIZATION_HOST_SHELL); \
-	elif echo "$(DOCKER_TARGETS)" | grep -qw "$(TARGET)"; then \
-		$(CURDIR)/scripts/docker_shell.sh $(CURDIR) $(TARGET); \
-	else \
-		echo "Unsupported shell TARGET='$(TARGET)'."; \
-		echo "Shell is available for: $(ALL_TARGETS)"; \
-		exit 1; \
-	fi
-
-sync-configs: require-target
+sync-configs:
 	@test -f .env || { echo "Error: .env not found. Run: cp .env.example .env"; exit 1; }
-	$(SYNC_CONFIGS) $(TARGET)
+	$(SYNC_CONFIGS)
 
 colcon-build:
 	@set -e; \
@@ -99,7 +66,8 @@ zenoh-build:
 	if [ -f .env ]; then . ./.env; fi; \
 	if [ "$${DISTRIBUTED_MODE:-0}" != "1" ]; then \
 		echo "Error: make zenoh-build is available only when DISTRIBUTED_MODE=1."; \
-		echo "Default mode is desktop-only. Set DISTRIBUTED_MODE=1 in .env to enable distributed mode."; \
+		echo "Default mode uses workstation host + optional Jetson container."; \
+		echo "Set DISTRIBUTED_MODE=1 in .env to enable distributed mode."; \
 		exit 1; \
 	fi; \
 	for p in $(ZENOH_BUILD_ROOTS); do \
@@ -113,7 +81,8 @@ zenoh-client:
 	if [ -f .env ]; then . ./.env; fi; \
 	if [ "$${DISTRIBUTED_MODE:-0}" != "1" ]; then \
 		echo "Error: make zenoh-client is available only when DISTRIBUTED_MODE=1."; \
-		echo "Default mode is desktop-only. Set DISTRIBUTED_MODE=1 in .env to enable distributed mode."; \
+		echo "Default mode uses workstation host + optional Jetson container."; \
+		echo "Set DISTRIBUTED_MODE=1 in .env to enable distributed mode."; \
 		exit 1; \
 	fi; \
 	./scripts/run_zenoh_client.sh
