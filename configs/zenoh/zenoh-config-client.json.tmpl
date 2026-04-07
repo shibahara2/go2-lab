@@ -1,0 +1,14 @@
+{
+    mode: "client",
+    plugins: {
+        ros2dds: {
+            __path__: "src/zenoh-plugin-ros2dds/target/release/libzenoh_plugin_ros2dds.so",
+            domain: 0,
+            ros_localhost_only: false,
+            reliable_routes_blocking: false,
+        }
+    },
+    connect: {
+       endpoints: ["tcp/${ZENOH_ROUTER_IP}:${ZENOH_ROUTER_PORT}"]
+    }
+}

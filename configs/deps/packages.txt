@@ -1,0 +1,40 @@
+# Build tools
+cargo
+clang
+cmake
+git
+libclang-dev
+pkg-config
+rustc
+unzip
+wget
+
+# Libraries
+libatlas-base-dev
+libeigen3-dev
+libglew-dev
+libgoogle-glog-dev
+libpcl-dev
+libssl-dev
+libsuitesparse-dev
+
+# Python
+python3-ament-package
+python3-argcomplete
+python3-colcon-common-extensions
+python3-pip
+python3-rosdep
+python3-vcstool
+
+# ROS
+ros-humble-cv-bridge
+ros-humble-image-transport
+ros-humble-image-transport-plugins
+ros-humble-pcl-conversions
+ros-humble-pcl-ros
+ros-humble-rmw-cyclonedds-cpp
+ros-humble-robot-state-publisher
+ros-humble-rosidl-generator-dds-idl
+ros-humble-rviz2
+ros-humble-tf2
+ros-humble-xacro

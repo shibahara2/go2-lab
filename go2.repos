@@ -1,0 +1,9 @@
+repositories:
+  src/zenoh:
+    type: git
+    url: https://github.com/eclipse-zenoh/zenoh.git
+    version: 44f8b24898bb7c49af54e7476fb9fefd5f7e37bf
+  src/zenoh-plugin-ros2dds:
+    type: git
+    url: https://github.com/eclipse-zenoh/zenoh-plugin-ros2dds.git
+    version: 592422b10c4fe52ab0d5a4123a5f4462fc955001

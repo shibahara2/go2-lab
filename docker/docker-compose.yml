@@ -1,58 +1,38 @@
-version: '3'
-services: 
-  unitree_ros2-jetson:
-    volumes: 
+x-common: &common
+  network_mode: "host"
+  command: /bin/zsh -c "while sleep 1000; do :; done"
+
+services:
+  bridge:
+    <<: *common
+    profiles: ["bridge"]
+    platform: linux/amd64
+    volumes:
       - ..:/workspace:cached
-      - /tmp/.X11-unix:/tmp/.X11-unix:rw
-      - /mnt/wslg:/mnt/wslg
-      - /root/.gazebo/models/:/root/.gazebo/models/
-      - /var/run/docker.sock:/var/run/docker.sock 
-      - $HOME/.Xauthority:/tmp/.Xauthority:rw
-    environment:
-      - DISPLAY=${DISPLAY}
-      - XAUTHORITY=/tmp/.Xauthority
-
-    cap_add:
-      - SYS_PTRACE  
-    command: /bin/sh -c "while sleep 1000; do :; done"
- 
+    env_file: ../.env
     build:
-      context: .
-      dockerfile: Dockerfile.jetson
-    image: unitree_ros2:jetson
-    container_name: unitree_ros2-jetson
-    
-    # run `cd .devcontainer/ && docker build . -t ros2-humble-dev:latest -f Dockerfile-humble` 
-    # to use the development environment, or you can build it with Dockerfile.
-    # Perhaps Unitree will provide a dockerhub image later to save you time compiling.
-    privileged: true
-    network_mode: "host"
+      context: ..
+      dockerfile: docker/Dockerfile
+      args:
+        BASE_IMAGE: osrf/ros:humble-desktop-full
+    image: go2-lab:bridge
+    container_name: bridge
 
-  unitree_ros2-azure:
+  jetson:
+    <<: *common
+    profiles: ["jetson"]
+    platform: linux/arm64
     volumes:
       - ..:/workspace:cached
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
-      - /mnt/wslg:/mnt/wslg
-      - /root/.gazebo/models/:/root/.gazebo/models/
-      - /var/run/docker.sock:/var/run/docker.sock
-      - $HOME/.Xauthority:/tmp/.Xauthority:rw
-    environment:
-      - DISPLAY=${DISPLAY}
-      - XAUTHORITY=/tmp/.Xauthority
-
-    cap_add:
-      - SYS_PTRACE
-    command: /bin/sh -c "while sleep 1000; do :; done"
-
+    env_file: ../.env
     build:
-      context: .
-      dockerfile: Dockerfile.azure
-    image: unitree_ros2:azure
-    container_name: unitree_ros2-azure
-
-    # run `cd .devcontainer/ && docker build . -t ros2-humble-dev:latest -f Dockerfile-humble`
-    # to use the development environment, or you can build it with Dockerfile.
-    # Perhaps Unitree will provide a dockerhub image later to save you time compiling.
-    privileged: true
-    network_mode: "host"
-
+      context: ..
+      dockerfile: docker/Dockerfile
+      args:
+        BASE_IMAGE: althack/ros2:humble-full
+      network: host
+    image: go2-lab:jetson
+    container_name: jetson
+    ipc: "host"
+    runtime: nvidia
