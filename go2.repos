@@ -1,24 +1,4 @@
 repositories:
-  src/Livox-SDK2:
-    type: git
-    url: https://github.com/Livox-SDK/Livox-SDK2.git
-    version: 6a940156dd7151c3ab6a52442d86bc83613bd11b
-  src/ros/FAST_LIO:
-    type: git
-    url: https://github.com/Ericsii/FAST_LIO_ROS2.git
-    version: 2fffc570a25d0df172720bac034fbdb6a13d2162
-  src/ros/FAST_LIO/include/ikd-Tree:
-    type: git
-    url: https://github.com/hku-mars/ikd-Tree.git
-    version: e2e3f4e9d3b95a9e66b1ba83dc98d4a05ed8a3c4
-  src/ros/livox_ros_driver2:
-    type: git
-    url: https://github.com/Livox-SDK/livox_ros_driver2.git
-    version: 6b9356cadf77084619ba406e6a0eb41163b08039
-  src/ros/unitree_ros2:
-    type: git
-    url: https://github.com/unitreerobotics/unitree_ros2.git
-    version: 3ff13ea08ec619496c2651fd21b172f7958dd5a5
   src/zenoh:
     type: git
     url: https://github.com/eclipse-zenoh/zenoh.git

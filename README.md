@@ -37,7 +37,14 @@ Jetson 用と Ubuntu desktop PC 用で、それぞれこのリポジトリを cl
 
 ## 3. 外部リポジトリ取得
 
-依存する外部リポジトリは `go2.repos` で管理しています。`vcstool` を使って取得します。
+依存のうち upstream 追従を続けるものだけを `go2.repos` で管理しています。`vcstool` で取得する対象は `zenoh` と `zenoh-plugin-ros2dds` の 2 件です。
+
+次の依存は vendor 化しており、`go2-lab` の git で直接追跡します。
+
+- `src/Livox-SDK2`
+- `src/ros/FAST_LIO`
+- `src/ros/livox_ros_driver2`
+- `src/ros/unitree_ros2`
 
 ### 3.1 uv
 
@@ -57,24 +64,12 @@ uv tool install --with 'setuptools<81' vcstool
 uvx --from vcstool vcs import --force < go2.repos
 ```
 
-### 3.4 外部リポジトリのローカル変更管理
+### 3.4 ローカル変更の扱い
 
-`src/` 配下の外部リポジトリは `go2-lab` の git では直接追跡しません。  
-外部リポジトリにローカル変更を入れた場合は、`go2-lab` 側の patch として記録して管理します。
+vendor 化した依存は `go2-lab` の変更としてそのまま編集・commit します。  
+`go2.repos` で取得する `zenoh` 系 2 リポジトリは upstream pin 管理のままとし、通常運用ではローカル変更を持たない前提です。
 
-- patch 適用: 外部リポジトリを取得し直したあと、`go2-lab` 管理の差分を再適用する
-- patch 記録: 外部リポジトリを編集したあと、その差分を `go2-lab` 配下の `patches/` に保存する
-
-```bash
-# go2.repos 取得後に patch を再適用
-make apply-patches
-
-# 外部リポジトリのローカル差分を patch に記録
-make record-patches
-```
-
-現状は `src/ros/FAST_LIO` の差分を `patches/fast_lio/0001-local-changes.patch` で管理します。  
-`make record-patches` は `src/ros/FAST_LIO` の未 commit 差分から patch を自動生成し、差分が空なら patch を削除します。
+将来 `zenoh` 系にも継続的な変更が必要になった場合は、patch 運用を再導入せず、そのリポジトリ単位で `fork + pin` に切り替える方針です。
 
 ## 4. 実行環境構築
 
@@ -257,7 +252,7 @@ ros2 topic echo /go2/imu --once
 
 ### 7.2 `sync-configs` の展開対象
 
-`src/` 配下の生成物は直接編集せず、`configs/` 側を編集してから再同期してください。
+次のファイルは `configs/` から生成・同期するため、展開先ではなく `configs/` 側を編集してから再同期してください。
 
 | テンプレート | 展開先 | 使用する変数 |
 |---|---|---|

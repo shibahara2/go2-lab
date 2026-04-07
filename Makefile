@@ -7,7 +7,7 @@ ZENOH_BUILD_ROOTS = src/zenoh src/zenoh-plugin-ros2dds
 ALL_TARGETS = jetson bridge visualization-host
 DOCKER_TARGETS = jetson bridge
 
-.PHONY: help build up down ps logs shell sync-configs apply-patches record-patches colcon-build zenoh-build zenoh-client target-build require-target require-docker-target host-deps-install livox-sdk-install
+.PHONY: help build up down ps logs shell sync-configs colcon-build zenoh-build zenoh-client target-build require-target require-docker-target host-deps-install livox-sdk-install
 
 help:
 	@echo "Usage:"
@@ -19,8 +19,6 @@ help:
 	@echo "  make shell TARGET=jetson              # enter primary container"
 	@echo "  make shell TARGET=visualization-host  # open host shell with auto env/source"
 	@echo "  make sync-configs TARGET=jetson      # sync tracked configs into src/ and configs/"
-	@echo "  make apply-patches                    # apply go2-lab-managed patches to external repos"
-	@echo "  make record-patches                   # record local external-repo diffs into go2-lab patches/"
 	@echo "  make colcon-build                      # build ROS packages under $(ROS_SRC_PREFIX) only"
 	@echo "  make zenoh-build                       # build $(ZENOH_BUILD_ROOTS)"
 	@echo "  make zenoh-client                      # run zenoh client with optional ZENOH_CONFIG_OVERRIDE"
@@ -73,12 +71,6 @@ shell: require-target
 sync-configs: require-target
 	@test -f .env || { echo "Error: .env not found. Run: cp .env.example .env"; exit 1; }
 	$(SYNC_CONFIGS) $(TARGET)
-
-apply-patches:
-	./scripts/apply_patches.sh
-
-record-patches:
-	./scripts/record_patches.sh
 
 colcon-build:
 	@set -e; \

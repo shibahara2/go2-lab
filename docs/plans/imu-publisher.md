@@ -5,7 +5,7 @@
 - Add a new ROS 2 package under `src/ros/imu_publisher`.
 - Subscribe to Go2 `unitree_go::msg::LowState` on `/lowstate`.
 - Publish `sensor_msgs/msg/Imu` on `/go2/imu` with `frame_id` set to `imu_link`.
-- Keep the implementation inside `go2-lab`; do not modify external repositories such as `src/ros/unitree_ros2`.
+- Keep the implementation inside `go2-lab`; avoid unnecessary edits outside the new package.
 
 ## Implementation
 
