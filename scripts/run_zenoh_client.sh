@@ -12,6 +12,12 @@ if [[ -f "${env_file}" ]]; then
   set +a
 fi
 
+if [[ "${DISTRIBUTED_MODE:-0}" != "1" ]]; then
+  echo "zenoh client is disabled because DISTRIBUTED_MODE=${DISTRIBUTED_MODE:-0}." >&2
+  echo "Default mode is desktop-only. Set DISTRIBUTED_MODE=1 in .env to enable distributed mode." >&2
+  exit 1
+fi
+
 config_path="${repo_root}/configs/zenoh/zenoh-config-client.json"
 binary_path="${repo_root}/src/zenoh/target/release/zenohd"
 

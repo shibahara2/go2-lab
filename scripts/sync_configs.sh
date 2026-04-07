@@ -17,6 +17,8 @@ set -a
 source "${env_file}"
 set +a
 
+DISTRIBUTED_MODE="${DISTRIBUTED_MODE:-0}"
+
 render_file() {
   local src_rel="$1"
   local dest_rel="$2"
@@ -73,6 +75,10 @@ render_file "configs/unitree_ros2/setup.sh" \
 copy_file "configs/fast_lio/mid360.yaml" \
   "src/ros/FAST_LIO/config/mid360.yaml"
 
-render_file "configs/zenoh/zenoh-config-client.json.tmpl" \
-  "configs/zenoh/zenoh-config-client.json" \
-  '${ZENOH_ROUTER_IP} ${ZENOH_ROUTER_PORT}'
+if [[ "${DISTRIBUTED_MODE}" == "1" ]]; then
+  render_file "configs/zenoh/zenoh-config-client.json.tmpl" \
+    "configs/zenoh/zenoh-config-client.json" \
+    '${ZENOH_ROUTER_IP} ${ZENOH_ROUTER_PORT}'
+else
+  echo "Skipping zenoh config generation because DISTRIBUTED_MODE=${DISTRIBUTED_MODE}"
+fi

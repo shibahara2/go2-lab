@@ -13,18 +13,21 @@ help:
 	@echo "Usage:"
 	@echo "  TARGET values: $(ALL_TARGETS)"
 	@echo "  Docker-capable TARGET values: $(DOCKER_TARGETS)"
+	@echo "  Default mode: DISTRIBUTED_MODE=0 (desktop-only on TARGET=bridge)"
+	@echo "  make build TARGET=bridge              # build desktop services"
+	@echo "  make up TARGET=bridge                 # run desktop services in background"
+	@echo "  make shell TARGET=bridge              # enter desktop container"
 	@echo "  make build TARGET=jetson              # build Jetson services"
-	@echo "  make build TARGET=bridge              # build bridge services"
-	@echo "  make up TARGET=jetson                 # run services in background"
-	@echo "  make shell TARGET=jetson              # enter primary container"
+	@echo "  make up TARGET=jetson                 # run Jetson services in background"
+	@echo "  make shell TARGET=jetson              # enter Jetson container"
 	@echo "  make shell TARGET=visualization-host  # open host shell with auto env/source"
-	@echo "  make sync-configs TARGET=jetson      # sync tracked configs into src/ and configs/"
+	@echo "  make sync-configs TARGET=bridge       # sync tracked configs into src/ and configs/"
 	@echo "  make colcon-build                      # build ROS packages under $(ROS_SRC_PREFIX) only"
-	@echo "  make zenoh-build                       # build $(ZENOH_BUILD_ROOTS)"
-	@echo "  make zenoh-client                      # run zenoh client with optional ZENOH_CONFIG_OVERRIDE"
-	@echo "  make target-build                      # build ROS + Rust with one command"
+	@echo "  make target-build                      # build ROS packages; include zenoh only in distributed mode"
+	@echo "  make zenoh-build                       # distributed mode only"
+	@echo "  make zenoh-client                      # distributed mode only"
 	@echo "  make host-deps-install                # install system/ROS packages for host builds"
-	@echo "  # ROS packages are built from $(ROS_SRC_PREFIX), Rust from $(ZENOH_BUILD_ROOTS)"
+	@echo "  # ROS packages are built from $(ROS_SRC_PREFIX); Rust zenoh workspaces are optional"
 
 require-target:
 	@[ -n "$(TARGET)" ] || { \
@@ -93,6 +96,12 @@ colcon-build:
 
 zenoh-build:
 	@set -e; \
+	if [ -f .env ]; then . ./.env; fi; \
+	if [ "$${DISTRIBUTED_MODE:-0}" != "1" ]; then \
+		echo "Error: make zenoh-build is available only when DISTRIBUTED_MODE=1."; \
+		echo "Default mode is desktop-only. Set DISTRIBUTED_MODE=1 in .env to enable distributed mode."; \
+		exit 1; \
+	fi; \
 	for p in $(ZENOH_BUILD_ROOTS); do \
 		if [ ! -f "$$p/Cargo.toml" ]; then continue; fi; \
 		echo "cargo build --release ($$p)"; \
@@ -100,9 +109,23 @@ zenoh-build:
 	done
 
 zenoh-client:
+	@set -e; \
+	if [ -f .env ]; then . ./.env; fi; \
+	if [ "$${DISTRIBUTED_MODE:-0}" != "1" ]; then \
+		echo "Error: make zenoh-client is available only when DISTRIBUTED_MODE=1."; \
+		echo "Default mode is desktop-only. Set DISTRIBUTED_MODE=1 in .env to enable distributed mode."; \
+		exit 1; \
+	fi; \
 	./scripts/run_zenoh_client.sh
 
-target-build: colcon-build zenoh-build
+target-build: colcon-build
+	@set -e; \
+	if [ -f .env ]; then . ./.env; fi; \
+	if [ "$${DISTRIBUTED_MODE:-0}" = "1" ]; then \
+		$(MAKE) zenoh-build; \
+	else \
+		echo "Skipping zenoh-build because DISTRIBUTED_MODE=$${DISTRIBUTED_MODE:-0}."; \
+	fi
 
 host-deps-install:
 	sudo apt-get update && \
