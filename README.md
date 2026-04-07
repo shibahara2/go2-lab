@@ -101,6 +101,8 @@ make sync-configs
 - `ZENOH_ROUTER_IP`: 外部 router の IP
 - `ROS_DOMAIN_ID`: workstation 側と揃える
 
+設定を反映してコンテナを作成します。
+
 ```bash
 make sync-configs
 make build
@@ -114,6 +116,8 @@ make shell
 - `NETWORK_INTERFACE`: workstation Linux ホストで使う IF 名
 - `ZENOH_ROUTER_IP`: 外部 router の IP
 - `ROS_DOMAIN_ID`: robot 側と揃える
+
+設定を反映します。
 
 ```bash
 make sync-configs
