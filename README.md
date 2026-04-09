@@ -23,11 +23,9 @@
 - [7. 環境変数と設定ファイル](#7-環境変数と設定ファイル)
   - [7.1 主要変数](#71-主要変数)
   - [7.2 `sync-configs` の生成対象](#72-sync-configs-の生成対象)
-  - [7.3 zenoh client](#73-zenoh-client)
-- [8. 構成を変更した場合](#8-構成を変更した場合)
-- [9. 補足](#9-補足)
-- [10. トラブルシュート](#10-トラブルシュート)
-- [11. 参考資料](#11-参考資料)
+- [8. 補足](#8-補足)
+- [9. トラブルシュート](#9-トラブルシュート)
+- [10. 参考資料](#10-参考資料)
 
 ## 1. 構成
 
@@ -268,7 +266,7 @@ ros2 topic echo /go2/imu --once
 
 ### 7.2 `sync-configs` の生成対象
 
-次のファイルはテンプレートから生成するため、実ファイルではなく `.tmpl` 側を編集してから再同期してください。`FAST_LIO` の設定は生成対象ではないので、`src/ros/FAST_LIO/config/mid360.yaml` を直接編集します。
+次のファイルは `.env` の値を使ってテンプレートから生成します。設定値を変更する場合は `.env` を編集してから `make sync-configs` を実行してください。テンプレートの構造や固定文言を変えたい場合だけ `.tmpl` 側を編集します。`.env` を更新した場合も、対象マシンで再度 `make sync-configs` を実行してください。
 
 | 入力ファイル | 出力先 | 使用する変数 |
 |---|---|---|
@@ -276,27 +274,23 @@ ros2 topic echo /go2/imu --once
 | `src/ros/unitree_ros2/setup.sh.tmpl` | `src/ros/unitree_ros2/setup.sh` | `NETWORK_INTERFACE`, `RMW_IMPLEMENTATION` |
 | `configs/zenoh/zenoh-config-client.json.tmpl` | `configs/zenoh/zenoh-config-client.json` | `DISTRIBUTED_MODE=1` のときだけ `ZENOH_ROUTER_IP`, `ZENOH_ROUTER_PORT` |
 
-### 7.3 zenoh client
+## 8. 補足
 
-- client 設定: `configs/zenoh/zenoh-config-client.json`
+Jetson で複数ターミナルを開いて作業する場合は、SSH multiplexing や zellij レイアウトを使うと運用しやすくなります。ただし、これらは本リポジトリの必須要件ではありません。
 
-`make zenoh-client` は `DISTRIBUTED_MODE=1` のときだけ利用できます。.env を読み込み、`src/zenoh/target/release/zenohd -c configs/zenoh/zenoh-config-client.json` を起動します。
+## 9. トラブルシュート
+
+### zenoh client を起動したい
+
+- client 設定は `configs/zenoh/zenoh-config-client.json`
+- `make zenoh-client` は `DISTRIBUTED_MODE=1` のときだけ利用可能
+- `.env` を読み込み、`src/zenoh/target/release/zenohd -c configs/zenoh/zenoh-config-client.json` を起動する
 
 巨大な `PointCloud2` が congestion で drop される疑いがあるときは、`.env` に次を入れてから `make zenoh-client` を起動してください。
 
 ```bash
 ZENOH_CONFIG_OVERRIDE=transport/link/tx/queue/congestion_control/drop/wait_before_drop=1000000
 ```
-
-## 8. 構成を変更した場合
-
-`.env` を編集したら、対象マシンで再度 `make sync-configs` を実行してください。
-
-## 9. 補足
-
-Jetson で複数ターミナルを開いて作業する場合は、SSH multiplexing や zellij レイアウトを使うと運用しやすくなります。ただし、これらは本リポジトリの必須要件ではありません。
-
-## 10. トラブルシュート
 
 ### zenoh client 起動時に `does not match an available interface` で落ちる
 
@@ -342,7 +336,7 @@ ifconfig
 - `src/ros/unitree_ros2/setup.sh` に反映された `NETWORK_INTERFACE` を確認する
 - `ros2 daemon stop` で discovery キャッシュを消してから再確認する
 
-## 11. 参考資料
+## 10. 参考資料
 
 - TechShare: <https://techshare.co.jp/faq/unitree/mid360_slam_fast-lio.html>
 - zenoh plugin for ROS 2 DDS: <https://github.com/eclipse-zenoh/zenoh-plugin-ros2dds>
