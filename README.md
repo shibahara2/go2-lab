@@ -248,7 +248,7 @@ ros2 topic echo /go2/imu --once
 
 ## 7. 環境変数と設定ファイル
 
-各 clone の `.env` から設定を生成します。`configs/fast_lio/mid360.yaml` は変数展開なしでそのまま同期されます。
+各 clone の `.env` から必要な設定を生成します。固定値だけの設定は `src/ros/...` を直接編集し、変数展開が必要な設定だけテンプレートから再生成します。
 
 ### 7.1 主要変数
 
@@ -268,18 +268,13 @@ ros2 topic echo /go2/imu --once
 
 ### 7.2 `sync-configs` の生成対象
 
-次のファイルは `configs/` から生成または同期するため、展開先ではなく `configs/` 側を編集してから再同期してください。
+次のファイルはテンプレートから生成するため、実ファイルではなく `.tmpl` 側を編集してから再同期してください。`FAST_LIO` の設定は生成対象ではないので、`src/ros/FAST_LIO/config/mid360.yaml` を直接編集します。
 
 | 入力ファイル | 出力先 | 使用する変数 |
 |---|---|---|
-| `configs/livox/MID360_config.json` | `src/ros/livox_ros_driver2/config/MID360_config.json` | `LIDAR_HOST_IP`, `LIDAR_DEVICE_IP` |
-| `configs/fast_lio/mid360.yaml` | `src/ros/FAST_LIO/config/mid360.yaml` | なし |
-| `configs/unitree_ros2/setup.sh` | `src/ros/unitree_ros2/setup.sh` | `NETWORK_INTERFACE`, `RMW_IMPLEMENTATION` |
+| `src/ros/livox_ros_driver2/config/MID360_config.json.tmpl` | `src/ros/livox_ros_driver2/config/MID360_config.json` | `LIDAR_HOST_IP`, `LIDAR_DEVICE_IP` |
+| `src/ros/unitree_ros2/setup.sh.tmpl` | `src/ros/unitree_ros2/setup.sh` | `NETWORK_INTERFACE`, `RMW_IMPLEMENTATION` |
 | `configs/zenoh/zenoh-config-client.json.tmpl` | `configs/zenoh/zenoh-config-client.json` | `DISTRIBUTED_MODE=1` のときだけ `ZENOH_ROUTER_IP`, `ZENOH_ROUTER_PORT` |
-
-```bash
-make sync-configs
-```
 
 ### 7.3 zenoh client
 
@@ -296,10 +291,6 @@ ZENOH_CONFIG_OVERRIDE=transport/link/tx/queue/congestion_control/drop/wait_befor
 ## 8. 構成を変更した場合
 
 `.env` を編集したら、対象マシンで再度 `make sync-configs` を実行してください。
-
-```bash
-make sync-configs
-```
 
 ## 9. 補足
 

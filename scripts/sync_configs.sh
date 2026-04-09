@@ -40,38 +40,13 @@ render_file() {
   echo "Rendered ${src_rel} -> ${dest_rel}"
 }
 
-copy_file() {
-  local src_rel="$1"
-  local dest_rel="$2"
-  local src="${repo_root}/${src_rel}"
-  local dest="${repo_root}/${dest_rel}"
-  local dest_dir
-
-  if [[ ! -f "${src}" ]]; then
-    echo "Config source not found: ${src_rel}" >&2
-    exit 1
-  fi
-
-  dest_dir="$(dirname "${dest}")"
-  if [[ ! -d "${dest_dir}" ]]; then
-    echo "Config destination directory not found: ${dest_rel}" >&2
-    exit 1
-  fi
-
-  cp "${src}" "${dest}"
-  echo "Copied ${src_rel} -> ${dest_rel}"
-}
-
-render_file "configs/livox/MID360_config.json" \
+render_file "src/ros/livox_ros_driver2/config/MID360_config.json.tmpl" \
   "src/ros/livox_ros_driver2/config/MID360_config.json" \
   '${LIDAR_HOST_IP} ${LIDAR_DEVICE_IP}'
 
-render_file "configs/unitree_ros2/setup.sh" \
+render_file "src/ros/unitree_ros2/setup.sh.tmpl" \
   "src/ros/unitree_ros2/setup.sh" \
   '${NETWORK_INTERFACE} ${RMW_IMPLEMENTATION}'
-
-copy_file "configs/fast_lio/mid360.yaml" \
-  "src/ros/FAST_LIO/config/mid360.yaml"
 
 if [[ "${DISTRIBUTED_MODE}" == "1" ]]; then
   render_file "configs/zenoh/zenoh-config-client.json.tmpl" \
