@@ -13,6 +13,7 @@ import urllib.parse
 import wave
 from collections import deque
 from dataclasses import dataclass
+from typing import Callable
 
 import numpy as np
 import rclpy
@@ -20,7 +21,7 @@ from geometry_msgs.msg import Twist
 from rclpy.node import Node
 
 
-SR = 16000
+SR = 24000
 CH_IN = 1
 FRAME_MS = 30
 FRAME_SAMPLES = SR * FRAME_MS // 1000
@@ -29,6 +30,7 @@ FRAME_BYTES = FRAME_SAMPLES * 2
 COOLDOWN_SEC = 0.4
 LINEAR_SPEED = 0.5
 ANGULAR_SPEED = 0.8
+STEP_FORWARD_SEC = 0.3
 
 VAD_PREFIX_PADDING_MS = 300
 VAD_START_SPEECH_MS = 90
@@ -54,6 +56,106 @@ class AsrResult:
     utterance_end_ts: float | None = None
 
 
+@dataclass
+class PendingToolCall:
+    call_id: str
+    name: str
+    arguments_json: str = ""
+
+
+class AzureToolCallExecutor:
+    def __init__(self, node: "VoiceTeleopNode") -> None:
+        self._node = node
+
+    def execute(self, pending: PendingToolCall) -> dict:
+        arguments = self._parse_tool_arguments(pending.arguments_json)
+        if pending.name == "step_forward":
+            self._node.step_forward()
+            self._log_completion("step_forward", arguments)
+            return {"ok": True, "executed": "step_forward", "duration_sec": STEP_FORWARD_SEC}
+        if pending.name == "stop_robot":
+            self._node.stop_robot()
+            self._log_completion("stop_robot", arguments)
+            return {"ok": True, "executed": "stop_robot"}
+        raise RuntimeError(f"unsupported tool call: {pending.name}")
+
+    def _log_completion(self, name: str, arguments: dict) -> None:
+        self._node.get_logger().info(
+            f"azure_tool_call_completed name={name} args={arguments!r} ok=1"
+        )
+
+    def _parse_tool_arguments(self, arguments_json: str) -> dict:
+        if not arguments_json:
+            return {}
+        try:
+            value = json.loads(arguments_json)
+        except json.JSONDecodeError as exc:
+            raise RuntimeError(f"invalid tool arguments: {exc}") from exc
+        if not isinstance(value, dict):
+            raise RuntimeError("tool arguments must decode to a JSON object")
+        return value
+
+
+class Pcm16AudioPlayer:
+    def __init__(self) -> None:
+        self._proc: subprocess.Popen | None = None
+        self._failed = False
+        self._lock = threading.Lock()
+
+    def write(self, audio_bytes: bytes) -> None:
+        if not audio_bytes or self._failed:
+            return
+        with self._lock:
+            if self._failed:
+                return
+            try:
+                if self._proc is None or self._proc.poll() is not None:
+                    self._proc = subprocess.Popen(
+                        [
+                            "aplay",
+                            "-q",
+                            "-f",
+                            "S16_LE",
+                            "-c",
+                            str(CH_IN),
+                            "-r",
+                            str(SR),
+                            "-t",
+                            "raw",
+                        ],
+                        stdin=subprocess.PIPE,
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL,
+                    )
+                assert self._proc.stdin is not None
+                self._proc.stdin.write(audio_bytes)
+                self._proc.stdin.flush()
+            except Exception:
+                self._failed = True
+                self.close()
+                raise
+
+    def close(self) -> None:
+        with self._lock:
+            proc = self._proc
+            self._proc = None
+            if proc is None:
+                return
+            try:
+                if proc.stdin is not None:
+                    proc.stdin.close()
+            except Exception:
+                pass
+            try:
+                proc.terminate()
+            except Exception:
+                pass
+            try:
+                proc.wait(timeout=1.0)
+            except Exception:
+                pass
+
+
 class VoiceTeleopNode(Node):
     def __init__(self) -> None:
         super().__init__("voice_teleop")
@@ -68,6 +170,14 @@ class VoiceTeleopNode(Node):
         self.get_logger().info(
             f"publish /cmd_vel linear.x={linear_x:.2f} angular.z={angular_z:.2f}"
         )
+
+    def stop_robot(self) -> None:
+        self.publish_twist(0.0, 0.0)
+
+    def step_forward(self) -> None:
+        self.publish_twist(LINEAR_SPEED, 0.0)
+        time.sleep(STEP_FORWARD_SEC)
+        self.stop_robot()
 
 
 def detect_command(text: str) -> CommandMatch | None:
@@ -157,10 +267,12 @@ class AzureRealtimeSession:
 
     def __init__(
         self,
+        node: VoiceTeleopNode,
         endpoint: str,
         api_key: str,
         deployment_name: str,
         transcription_model: str,
+        voice: str,
     ) -> None:
         try:
             import websockets
@@ -169,26 +281,39 @@ class AzureRealtimeSession:
                 "python3-websockets is not installed in this environment"
             ) from exc
 
+        self._node = node
         self._endpoint = endpoint
         self._api_key = api_key
         self._deployment_name = deployment_name
         self._transcription_model = transcription_model
+        self._voice = voice
         self._websockets = websockets
-        self._results: queue.Queue[AsrResult] = queue.Queue()
         self._errors: queue.Queue[BaseException] = queue.Queue()
         self._thread: threading.Thread | None = None
+        self._action_thread: threading.Thread | None = None
         self._loop: asyncio.AbstractEventLoop | None = None
         self._send_queue: asyncio.Queue | None = None
         self._ws = None
         self._transport_ready = threading.Event()
         self._session_ready = threading.Event()
         self._closed = threading.Event()
+        self._action_queue: queue.Queue[PendingToolCall | None] = queue.Queue()
         self._speech_started_at: float | None = None
         self._pending_turns: deque[tuple[float, float | None]] = deque()
+        self._pending_calls: dict[str, PendingToolCall] = {}
+        self._response_transcripts: dict[str, str] = {}
+        self._response_audio_transcripts: dict[str, str] = {}
+        self._latest_input_transcript = ""
+        self._audio_player = Pcm16AudioPlayer()
+        self._playback_failed = False
+        self._tool_executor = AzureToolCallExecutor(node)
+        self._event_handlers = self._build_event_handlers()
 
     def start(self) -> None:
         if self._thread is not None:
             return
+        self._action_thread = threading.Thread(target=self._action_loop, daemon=True)
+        self._action_thread.start()
         self._thread = threading.Thread(target=self._run_loop, daemon=True)
         self._thread.start()
         if not self._transport_ready.wait(timeout=10.0):
@@ -210,7 +335,12 @@ class AzureRealtimeSession:
                 pass
         if self._thread is not None:
             self._thread.join(timeout=5.0)
+        self._action_queue.put(None)
+        if self._action_thread is not None:
+            self._action_thread.join(timeout=5.0)
+        self._audio_player.close()
         self._thread = None
+        self._action_thread = None
 
     def send_audio_frame(self, frame_i16: np.ndarray) -> None:
         self.raise_if_error()
@@ -221,13 +351,6 @@ class AzureRealtimeSession:
             "audio": base64.b64encode(frame_i16.tobytes()).decode("ascii"),
         }
         self._loop.call_soon_threadsafe(self._send_queue.put_nowait, payload)
-
-    def poll_result(self) -> AsrResult | None:
-        self.raise_if_error()
-        try:
-            return self._results.get_nowait()
-        except queue.Empty:
-            return None
 
     def raise_if_error(self) -> None:
         try:
@@ -291,64 +414,342 @@ class AzureRealtimeSession:
             self._handle_server_event(json.loads(raw_message))
 
     def _handle_server_event(self, event: dict) -> None:
+        self._ensure_runtime_helpers()
         event_type = event.get("type")
-        if event_type == "session.updated":
-            self._session_ready.set()
+        if not event_type:
             return
-        if event_type == "input_audio_buffer.speech_started":
-            self._speech_started_at = time.time()
+        handler = self._event_handlers.get(event_type)
+        if handler is not None:
+            handler(event)
+
+    def _build_event_handlers(self) -> dict[str, Callable[[dict], None]]:
+        return {
+            "session.updated": lambda _event: self._session_ready.set(),
+            "input_audio_buffer.speech_started": lambda _event: self._mark_speech_started(),
+            "input_audio_buffer.speech_stopped": lambda _event: self._mark_speech_stopped(),
+            "conversation.item.input_audio_transcription.completed": self._handle_input_transcript,
+            "conversation.item.audio_transcription.completed": self._handle_input_transcript,
+            "conversation.item.input_audio_transcription.failed": self._handle_input_transcript_failed,
+            "conversation.item.audio_transcription.failed": self._handle_input_transcript_failed,
+            "response.output_item.added": self._handle_response_output_added_event,
+            "response.function_call_arguments.delta": self._handle_function_call_delta,
+            "response.function_call_arguments.done": self._handle_function_call_done,
+            "response.output_item.done": self._handle_response_output_done_event,
+            "response.audio.delta": self._handle_response_audio_delta,
+            "response.output_audio.delta": self._handle_response_audio_delta,
+            "response.audio_transcript.delta": self._handle_response_audio_transcript_delta,
+            "response.output_audio_transcript.delta": self._handle_response_audio_transcript_delta,
+            "response.audio_transcript.done": self._handle_response_audio_transcript_done,
+            "response.output_audio_transcript.done": self._handle_response_audio_transcript_done,
+            "response.done": self._handle_response_done,
+            "error": self._handle_error_event,
+        }
+
+    def _ensure_runtime_helpers(self) -> None:
+        if not hasattr(self, "_tool_executor"):
+            self._tool_executor = AzureToolCallExecutor(self._node)
+        if not hasattr(self, "_event_handlers"):
+            self._event_handlers = self._build_event_handlers()
+
+    def _mark_speech_started(self) -> None:
+        self._speech_started_at = time.time()
+
+    def _mark_speech_stopped(self) -> None:
+        stopped_at = time.time()
+        utterance_ms = None
+        if self._speech_started_at is not None:
+            utterance_ms = max(0.0, (stopped_at - self._speech_started_at) * 1000.0)
+        self._speech_started_at = None
+        self._pending_turns.append((stopped_at, utterance_ms))
+
+    def _handle_input_transcript_failed(self, event: dict) -> None:
+        error = event.get("error") or {}
+        message = error.get("message") or "input transcription failed"
+        self._errors.put(RuntimeError(message))
+
+    def _handle_response_output_added_event(self, event: dict) -> None:
+        self._handle_response_output_added(event.get("item") or {})
+
+    def _handle_response_output_done_event(self, event: dict) -> None:
+        self._handle_response_output_done(event.get("item") or {})
+
+    def _handle_error_event(self, event: dict) -> None:
+        error = event.get("error") or {}
+        message = error.get("message") or str(event)
+        self._errors.put(RuntimeError(message))
+
+    def _handle_input_transcript(self, event: dict) -> None:
+        transcript = (event.get("transcript") or "").strip()
+        stopped_at = time.time()
+        utterance_ms = None
+        if self._pending_turns:
+            stopped_at, utterance_ms = self._pending_turns.popleft()
+        latency_ms = max(0.0, (time.time() - stopped_at) * 1000.0)
+        self._latest_input_transcript = transcript
+        self._node.get_logger().info(
+            "azure_input_transcript "
+            f"utterance_ms={(utterance_ms or 0.0):.1f} "
+            f"stt_latency_ms={latency_ms:.1f} "
+            f"transcript={transcript!r}"
+        )
+
+    def _handle_response_output_added(self, item: dict) -> None:
+        item_type = item.get("type")
+        item_id = item.get("id")
+        if item_type == "function_call" and item_id:
+            pending = self._pending_calls.get(item_id)
+            if pending is None:
+                pending = PendingToolCall(
+                    call_id=item.get("call_id") or item_id,
+                    name=item.get("name") or "",
+                    arguments_json="",
+                )
+                self._pending_calls[item_id] = pending
+            if item.get("call_id"):
+                pending.call_id = item["call_id"]
+            if item.get("name"):
+                pending.name = item["name"]
             return
-        if event_type == "input_audio_buffer.speech_stopped":
-            stopped_at = time.time()
-            utterance_ms = None
-            if self._speech_started_at is not None:
-                utterance_ms = max(0.0, (stopped_at - self._speech_started_at) * 1000.0)
-            self._speech_started_at = None
-            self._pending_turns.append((stopped_at, utterance_ms))
+        self._collect_response_message_item(item)
+
+    def _handle_response_output_done(self, item: dict) -> None:
+        item_type = item.get("type")
+        item_id = item.get("id")
+        if item_type == "function_call" and item_id:
+            pending = self._pending_calls.get(item_id)
+            if pending is None:
+                pending = PendingToolCall(
+                    call_id=item.get("call_id") or item_id,
+                    name=item.get("name") or "",
+                    arguments_json=item.get("arguments") or "",
+                )
+                self._pending_calls[item_id] = pending
+            if item.get("call_id"):
+                pending.call_id = item["call_id"]
+            if item.get("name"):
+                pending.name = item["name"]
+            if item.get("arguments"):
+                pending.arguments_json = item["arguments"]
+            if item.get("status") == "completed":
+                self._enqueue_tool_call(item_id)
             return
-        if event_type in {
-            "conversation.item.input_audio_transcription.completed",
-            "conversation.item.audio_transcription.completed",
-        }:
-            transcript = (event.get("transcript") or "").strip()
-            stopped_at = time.time()
-            utterance_ms = None
-            if self._pending_turns:
-                stopped_at, utterance_ms = self._pending_turns.popleft()
-            latency_ms = max(0.0, (time.time() - stopped_at) * 1000.0)
-            self._results.put(AsrResult(transcript, latency_ms, utterance_ms, stopped_at))
+        self._collect_response_message_item(item)
+
+    def _collect_response_message_item(self, item: dict) -> None:
+        item_type = item.get("type")
+        item_id = item.get("id")
+        if item_type == "message" and item_id:
+            for content in item.get("content") or []:
+                if content.get("type") == "text":
+                    self._response_transcripts[item_id] = (
+                        self._response_transcripts.get(item_id, "") + (content.get("text") or "")
+                    )
+                if content.get("type") == "audio":
+                    transcript = content.get("transcript") or ""
+                    if transcript:
+                        self._response_audio_transcripts[item_id] = (
+                            self._response_audio_transcripts.get(item_id, "") + transcript
+                        )
+
+    def _handle_function_call_delta(self, event: dict) -> None:
+        item_id = event.get("item_id")
+        if not item_id:
             return
-        if event_type in {
-            "conversation.item.input_audio_transcription.failed",
-            "conversation.item.audio_transcription.failed",
-        }:
-            error = event.get("error") or {}
-            message = error.get("message") or "input transcription failed"
-            self._errors.put(RuntimeError(message))
+        pending = self._pending_calls.get(item_id)
+        if pending is None:
+            pending = PendingToolCall(
+                call_id=event.get("call_id") or item_id,
+                name=event.get("name") or "",
+            )
+            self._pending_calls[item_id] = pending
+        pending.arguments_json += event.get("delta") or ""
+        if event.get("name"):
+            pending.name = event["name"]
+
+    def _handle_function_call_done(self, event: dict) -> None:
+        item_id = event.get("item_id")
+        if not item_id:
             return
-        if event_type == "error":
-            error = event.get("error") or {}
-            message = error.get("message") or str(event)
-            self._errors.put(RuntimeError(message))
+        pending = self._pending_calls.get(item_id)
+        if pending is None:
+            pending = PendingToolCall(
+                call_id=event.get("call_id") or item_id,
+                name=event.get("name") or "",
+            )
+            self._pending_calls[item_id] = pending
+        if event.get("arguments"):
+            pending.arguments_json = event["arguments"]
+        if event.get("name"):
+            pending.name = event["name"]
+
+    def _handle_response_audio_delta(self, event: dict) -> None:
+        audio_b64 = event.get("delta") or ""
+        if not audio_b64:
+            return
+        try:
+            self._audio_player.write(base64.b64decode(audio_b64))
+        except Exception as exc:
+            if not self._playback_failed:
+                self._playback_failed = True
+                self._node.get_logger().warning(f"assistant audio playback failed: {exc}")
+
+    def _handle_response_audio_transcript_delta(self, event: dict) -> None:
+        item_id = event.get("item_id")
+        if not item_id:
+            return
+        self._response_audio_transcripts[item_id] = (
+            self._response_audio_transcripts.get(item_id, "") + (event.get("delta") or "")
+        )
+
+    def _handle_response_audio_transcript_done(self, event: dict) -> None:
+        item_id = event.get("item_id")
+        if not item_id:
+            return
+        transcript = event.get("transcript") or ""
+        if transcript:
+            self._response_audio_transcripts[item_id] = transcript
+
+    def _handle_response_done(self, event: dict) -> None:
+        response = event.get("response") or {}
+        response_id = response.get("id") or "-"
+        assistant_text = " ".join(
+            text.strip()
+            for text in (
+                *self._response_transcripts.values(),
+                *self._response_audio_transcripts.values(),
+            )
+            if text and text.strip()
+        ).strip()
+        self._node.get_logger().info(
+            "azure_response_done "
+            f"response_id={response_id} "
+            f"input_transcript={self._latest_input_transcript!r} "
+            f"assistant={assistant_text!r}"
+        )
+        self._response_transcripts.clear()
+        self._response_audio_transcripts.clear()
+
+    def _enqueue_tool_call(self, item_id: str) -> None:
+        pending = self._pending_calls.pop(item_id, None)
+        if pending is None:
+            return
+        self._action_queue.put(pending)
+
+    def _action_loop(self) -> None:
+        while True:
+            pending = self._action_queue.get()
+            if pending is None:
+                break
+            try:
+                self._node.get_logger().info(
+                    "azure_tool_call_received "
+                    f"call_id={pending.call_id} "
+                    f"name={pending.name} "
+                    f"args={pending.arguments_json or '{}'} "
+                    f"input_transcript={self._latest_input_transcript!r}"
+                )
+                output = self._execute_tool_call(pending)
+                self._queue_client_event(
+                    {
+                        "type": "conversation.item.create",
+                        "item": {
+                            "type": "function_call_output",
+                            "call_id": pending.call_id,
+                            "output": json.dumps(output, ensure_ascii=True),
+                        },
+                    }
+                )
+                self._queue_followup_response()
+            except Exception as exc:
+                self._errors.put(exc)
+                try:
+                    self._queue_client_event(
+                        {
+                            "type": "conversation.item.create",
+                            "item": {
+                                "type": "function_call_output",
+                                "call_id": pending.call_id,
+                                "output": json.dumps(
+                                    {"ok": False, "error": str(exc)}, ensure_ascii=True
+                                ),
+                            },
+                        }
+                    )
+                    self._queue_followup_response()
+                except Exception:
+                    pass
+
+    def _execute_tool_call(self, pending: PendingToolCall) -> dict:
+        self._ensure_runtime_helpers()
+        return self._tool_executor.execute(pending)
+
+    def _queue_client_event(self, payload: dict) -> None:
+        if self._loop is None or self._send_queue is None:
+            raise RuntimeError("Azure Realtime client is not started")
+        self._loop.call_soon_threadsafe(self._send_queue.put_nowait, payload)
+
+    def _queue_followup_response(self) -> None:
+        self._queue_client_event(
+            {
+                "type": "response.create",
+                "response": {
+                    "output_modalities": ["audio"],
+                },
+            }
+        )
 
     def _session_update_payload(self) -> dict:
         return {
             "type": "session.update",
             "session": {
+                "type": "realtime",
                 "instructions": (
-                    "Transcribe the user's speech for robot teleoperation command detection. "
-                    "Do not generate assistant responses."
+                    "You are operating a quadruped robot. "
+                    "Call a tool only when the user's latest utterance is an explicit robot movement command "
+                    "and the tool's description clearly matches the requested action. "
+                    "Do not call any tool for greetings, chit-chat, unclear utterances, or unrelated requests. "
+                    "If the utterance is ambiguous, do not move and ask a short Japanese clarification question. "
+                    "Whether you call a tool or not, always reply to the user in short Japanese. "
+                    "Always reply in short Japanese."
                 ),
-                "input_audio_format": "pcm16",
-                "input_audio_transcription": {"model": self._transcription_model},
-                "turn_detection": {
-                    "type": "server_vad",
-                    "threshold": 0.5,
-                    "prefix_padding_ms": VAD_PREFIX_PADDING_MS,
-                    "silence_duration_ms": VAD_SILENCE_DURATION_MS,
-                    "create_response": False,
+                "output_modalities": ["audio"],
+                "audio": {
+                    "input": {
+                        "transcription": {"model": self._transcription_model},
+                        "format": {
+                            "type": "audio/pcm",
+                            "rate": SR,
+                        },
+                        "turn_detection": {
+                            "type": "server_vad",
+                            "threshold": 0.5,
+                            "prefix_padding_ms": VAD_PREFIX_PADDING_MS,
+                            "silence_duration_ms": VAD_SILENCE_DURATION_MS,
+                            "create_response": True,
+                        },
+                    },
+                    "output": {
+                        "voice": self._voice,
+                        "format": {
+                            "type": "audio/pcm",
+                            "rate": SR,
+                        },
+                    },
                 },
-                "tools": [],
+                "tools": [
+                    {
+                        "type": "function",
+                        "name": "step_forward",
+                        "description": "Move the robot forward by one small fixed step.",
+                        "parameters": {"type": "object", "properties": {}},
+                    },
+                    {
+                        "type": "function",
+                        "name": "stop_robot",
+                        "description": "Stop the robot immediately.",
+                        "parameters": {"type": "object", "properties": {}},
+                    },
+                ],
             },
         }
 
@@ -411,8 +812,9 @@ def create_parakeet_asr_engine() -> AsrEngine:
     return ParakeetAsrEngine(asr_model, asr_device)
 
 
-def create_azure_realtime_session() -> AzureRealtimeSession:
+def create_azure_realtime_session(node: VoiceTeleopNode) -> AzureRealtimeSession:
     return AzureRealtimeSession(
+        node=node,
         endpoint=parse_azure_openai_endpoint(os.environ.get("AZURE_OPENAI_ENDPOINT")),
         api_key=parse_azure_openai_api_key(os.environ.get("AZURE_OPENAI_API_KEY")),
         deployment_name=parse_azure_openai_deployment_name(
@@ -422,6 +824,7 @@ def create_azure_realtime_session() -> AzureRealtimeSession:
             os.environ.get("AZURE_OPENAI_TRANSCRIPTION_MODEL", "whisper-1").strip()
             or "whisper-1"
         ),
+        voice=os.environ.get("AZURE_OPENAI_VOICE", "alloy").strip() or "alloy",
     )
 
 
@@ -566,32 +969,15 @@ def main_loop_batch(node: VoiceTeleopNode, asr: AsrEngine, vad: VadGate, capture
 def main_loop_realtime(
     node: VoiceTeleopNode, azure_session: AzureRealtimeSession, capture_dev: str
 ) -> None:
-    last_action_ts = 0.0
     for frame_i16, _proc in capture_frames(capture_dev):
         azure_session.send_audio_frame(frame_i16)
-        while True:
-            result = azure_session.poll_result()
-            if result is None:
-                break
-            last_action_ts = handle_asr_result(
-                node, azure_session.backend_name, result, last_action_ts
-            )
+        azure_session.raise_if_error()
     for _ in range(20):
-        drained = False
-        while True:
-            result = azure_session.poll_result()
-            if result is None:
-                break
-            drained = True
-            last_action_ts = handle_asr_result(
-                node, azure_session.backend_name, result, last_action_ts
-            )
-        if not drained:
-            azure_session.raise_if_error()
-            time.sleep(0.05)
+        azure_session.raise_if_error()
+        time.sleep(0.05)
 
 
-def main() -> None:
+def main() -> int:
     capture_dev = os.environ.get("VOICE_CAPTURE_DEV", "plughw:1,0")
     asr_backend = parse_asr_backend(os.environ.get("VOICE_ASR_BACKEND"))
 
@@ -599,12 +985,13 @@ def main() -> None:
     node = VoiceTeleopNode()
     spin_thread = threading.Thread(target=rclpy.spin, args=(node,), daemon=True)
     spin_thread.start()
+    exit_code = 0
 
     try:
         node.get_logger().info(f"loading ASR backend={asr_backend}")
         node.get_logger().info(f"capturing from {capture_dev} @ {SR} Hz")
         if asr_backend == "azure":
-            azure_session = create_azure_realtime_session()
+            azure_session = create_azure_realtime_session(node)
             node.get_logger().info("connecting Azure OpenAI Realtime session")
             azure_session.start()
             try:
@@ -620,10 +1007,16 @@ def main() -> None:
         node.get_logger().info("stopped by user")
     except Exception as e:
         node.get_logger().error(f"fatal: {e}")
-        sys.exit(1)
+        exit_code = 1
     finally:
         rclpy.shutdown()
+        destroy_node = getattr(node, "destroy_node", None)
+        if callable(destroy_node):
+            destroy_node()
+        spin_thread.join(timeout=5.0)
+
+    return exit_code
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

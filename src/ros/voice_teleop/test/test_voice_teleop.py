@@ -104,13 +104,90 @@ def test_parse_azure_openai_env_helpers_and_realtime_uri():
         raise AssertionError("expected ValueError for invalid endpoint")
 
 
-def test_azure_realtime_session_converts_completed_transcripts_to_asr_results():
-    node = load_node_module()
+def make_logger():
+    records = {"info": [], "warning": [], "error": []}
 
-    session = node.AzureRealtimeSession.__new__(node.AzureRealtimeSession)
-    session._results = queue.Queue()
+    logger = types.SimpleNamespace(
+        info=lambda *args, **_kwargs: records["info"].append(args[0] if args else ""),
+        warning=lambda *args, **_kwargs: records["warning"].append(args[0] if args else ""),
+        error=lambda *args, **_kwargs: records["error"].append(args[0] if args else ""),
+    )
+    return logger, records
+
+
+def make_fake_node(node_module):
+    logger, records = make_logger()
+    published = []
+
+    fake_node = types.SimpleNamespace(
+        get_logger=lambda: logger,
+        publish_twist=lambda linear_x, angular_z: published.append((linear_x, angular_z)),
+    )
+    fake_node.stop_robot = lambda: node_module.VoiceTeleopNode.stop_robot(fake_node)
+    fake_node.step_forward = lambda: node_module.VoiceTeleopNode.step_forward(fake_node)
+    return fake_node, published, records
+
+
+def make_session(node_module):
+    fake_node, published, records = make_fake_node(node_module)
+    session = node_module.AzureRealtimeSession.__new__(node_module.AzureRealtimeSession)
+    session._node = fake_node
+    session._endpoint = "https://example.openai.azure.com"
+    session._api_key = "secret"
+    session._deployment_name = "go2-voice"
+    session._transcription_model = "whisper-1"
+    session._voice = "alloy"
     session._errors = queue.Queue()
+    session._thread = None
+    session._action_thread = None
+    session._loop = None
+    session._send_queue = None
+    session._ws = None
+    session._transport_ready = threading.Event()
     session._session_ready = threading.Event()
+    session._closed = threading.Event()
+    session._action_queue = queue.Queue()
+    session._speech_started_at = None
+    session._pending_turns = deque()
+    session._pending_calls = {}
+    session._response_transcripts = {}
+    session._response_audio_transcripts = {}
+    session._latest_input_transcript = ""
+    session._audio_player = types.SimpleNamespace(write=lambda _audio: None, close=lambda: None)
+    session._playback_failed = False
+    session._queue_client_event = lambda payload: queued.append(payload)
+    queued = []
+    return session, fake_node, published, records, queued
+
+
+def test_azure_realtime_session_payload_enables_tools_and_audio_reply():
+    node = load_node_module()
+    session, _fake_node, _published, _records, _queued = make_session(node)
+
+    payload = session._session_update_payload()
+    session_cfg = payload["session"]
+    instructions = session_cfg["instructions"]
+
+    assert session_cfg["type"] == "realtime"
+    assert session_cfg["output_modalities"] == ["audio"]
+    assert "step_forward" not in instructions
+    assert "stop_robot" not in instructions
+    assert "tool's description clearly matches the requested action" in instructions
+    assert "Whether you call a tool or not, always reply to the user in short Japanese." in instructions
+    assert session_cfg["audio"]["input"]["transcription"]["model"] == "whisper-1"
+    assert session_cfg["audio"]["input"]["format"] == {"type": "audio/pcm", "rate": 24000}
+    assert session_cfg["audio"]["input"]["turn_detection"]["create_response"] is True
+    assert session_cfg["audio"]["output"]["voice"] == "alloy"
+    assert session_cfg["audio"]["output"]["format"] == {"type": "audio/pcm", "rate": 24000}
+    assert [tool["name"] for tool in session_cfg["tools"]] == [
+        "step_forward",
+        "stop_robot",
+    ]
+
+
+def test_azure_transcript_completion_logs_but_does_not_publish_motion():
+    node = load_node_module()
+    session, _fake_node, published, records, _queued = make_session(node)
     session._speech_started_at = 100.0
     session._pending_turns = deque()
 
@@ -128,9 +205,168 @@ def test_azure_realtime_session_converts_completed_transcripts_to_asr_results():
     finally:
         node.time.time = original_time
 
-    result = session.poll_result()
-    assert result is not None
-    assert result.text == "前進してください"
-    assert abs(result.utterance_ms - 600.0) < 1e-6
-    assert result.utterance_end_ts == 100.6
-    assert abs(result.latency_ms - 300.0) < 1e-6
+    assert published == []
+    assert any("azure_input_transcript" in message for message in records["info"])
+
+
+def test_azure_tool_call_dispatches_step_forward_and_returns_output():
+    node = load_node_module()
+    session, _fake_node, published, records, queued = make_session(node)
+    session._latest_input_transcript = "前進して"
+
+    original_sleep = node.time.sleep
+    node.time.sleep = lambda _sec: None
+    try:
+        session._handle_server_event(
+            {
+                "type": "response.output_item.done",
+                "item": {
+                    "id": "item-1",
+                    "type": "function_call",
+                    "call_id": "call-1",
+                    "name": "step_forward",
+                    "arguments": "{}",
+                    "status": "completed",
+                },
+            }
+        )
+        pending = session._action_queue.get_nowait()
+        output = session._execute_tool_call(pending)
+        session._queue_client_event(
+            {
+                "type": "conversation.item.create",
+                "item": {
+                    "type": "function_call_output",
+                    "call_id": pending.call_id,
+                    "output": node.json.dumps(output, ensure_ascii=True),
+                },
+            }
+        )
+        session._queue_followup_response()
+    finally:
+        node.time.sleep = original_sleep
+
+    assert published == [(node.LINEAR_SPEED, 0.0), (0.0, 0.0)]
+    assert any("azure_tool_call_completed name=step_forward" in message for message in records["info"])
+    assert queued[0]["item"]["call_id"] == "call-1"
+    assert queued[1] == {
+        "type": "response.create",
+        "response": {"output_modalities": ["audio"]},
+    }
+
+
+def test_azure_function_call_argument_deltas_are_accumulated_before_dispatch():
+    node = load_node_module()
+    session, _fake_node, _published, _records, _queued = make_session(node)
+
+    session._handle_server_event(
+        {
+            "type": "response.output_item.added",
+            "item": {"id": "item-1", "type": "function_call", "call_id": "call-1", "name": "stop_robot"},
+        }
+    )
+    session._handle_server_event(
+        {
+            "type": "response.function_call_arguments.delta",
+            "item_id": "item-1",
+            "delta": "{",
+        }
+    )
+    session._handle_server_event(
+        {
+            "type": "response.function_call_arguments.done",
+            "item_id": "item-1",
+            "arguments": "{}",
+        }
+    )
+
+    assert session._action_queue.empty()
+    pending = session._pending_calls["item-1"]
+    assert pending.name == "stop_robot"
+    assert pending.arguments_json == "{}"
+
+
+def test_stop_robot_tool_publishes_zero_twist():
+    node = load_node_module()
+    session, _fake_node, published, records, _queued = make_session(node)
+
+    output = session._execute_tool_call(
+        node.PendingToolCall(call_id="call-2", name="stop_robot", arguments_json="{}")
+    )
+
+    assert published == [(0.0, 0.0)]
+    assert output["executed"] == "stop_robot"
+    assert any("azure_tool_call_completed name=stop_robot" in message for message in records["info"])
+
+
+def test_step_forward_tool_runs_even_for_non_movement_transcript():
+    node = load_node_module()
+    session, _fake_node, published, records, _queued = make_session(node)
+    session._latest_input_transcript = "こんにちは"
+
+    original_sleep = node.time.sleep
+    node.time.sleep = lambda _sec: None
+    try:
+        output = session._execute_tool_call(
+            node.PendingToolCall(call_id="call-3", name="step_forward", arguments_json="{}")
+        )
+    finally:
+        node.time.sleep = original_sleep
+
+    assert published == [(node.LINEAR_SPEED, 0.0), (0.0, 0.0)]
+    assert output["ok"] is True
+    assert output["executed"] == "step_forward"
+    assert any("azure_tool_call_completed name=step_forward" in message for message in records["info"])
+
+
+def test_azure_tool_call_is_dispatched_only_after_output_item_done():
+    node = load_node_module()
+    session, _fake_node, _published, _records, _queued = make_session(node)
+
+    session._handle_server_event(
+        {
+            "type": "response.function_call_arguments.done",
+            "item_id": "item-1",
+            "call_id": "call-1",
+            "name": "step_forward",
+            "arguments": "{}",
+        }
+    )
+    assert session._action_queue.empty()
+    session._handle_server_event(
+        {
+            "type": "response.output_item.done",
+            "item": {
+                "id": "item-1",
+                "type": "function_call",
+                "call_id": "call-1",
+                "name": "step_forward",
+                "arguments": "{}",
+                "status": "completed",
+            },
+        }
+    )
+
+    pending = session._action_queue.get_nowait()
+    assert pending.call_id == "call-1"
+    assert pending.name == "step_forward"
+    assert pending.arguments_json == "{}"
+    assert "item-1" not in session._pending_calls
+
+
+def test_response_audio_delta_is_forwarded_to_player():
+    node = load_node_module()
+    session, _fake_node, _published, _records, _queued = make_session(node)
+    captured = []
+    session._audio_player = types.SimpleNamespace(
+        write=lambda audio: captured.append(audio), close=lambda: None
+    )
+
+    session._handle_server_event(
+        {
+            "type": "response.output_audio.delta",
+            "delta": "AQI=",
+        }
+    )
+
+    assert captured == [b"\x01\x02"]

@@ -260,7 +260,7 @@ ros2 topic echo /go2/imu --once
 
 ### 6.4 音声 teleop (voice_teleop)
 
-`dgx-spark` コンテナ内で発話をトランスクリプトし、キーワードから `geometry_msgs/Twist` を `/cmd_vel` に publish します。STT backend はローカル NVIDIA Parakeet (`nvidia/parakeet-tdt_ctc-0.6b-ja`) と Azure OpenAI Realtime API を `VOICE_ASR_BACKEND` で切り替えできます。`cmd_vel_control` が `/cmd_vel` を `/api/sport/request` に変換するため、DGX Spark 側で本ノードを動かし、`robot` 側で `cmd_vel_control` を起動することで Go2 が動きます。設計の背景は `docs/adr/0001-voice-teleop.md` を参照してください。
+`dgx-spark` コンテナ内で発話から `geometry_msgs/Twist` を `/cmd_vel` に publish します。STT backend はローカル NVIDIA Parakeet (`nvidia/parakeet-tdt_ctc-0.6b-ja`) と Azure OpenAI Realtime API を `VOICE_ASR_BACKEND` で切り替えできます。`parakeet` はローカル transcript をキーワード判定して `/cmd_vel` を出し、`azure` は Realtime API の STT -> LLM -> function calling で `step_forward` / `stop_robot` を選び、日本語の短い assistant reply をテキスト+音声で返します。`cmd_vel_control` が `/cmd_vel` を `/api/sport/request` に変換するため、DGX Spark 側で本ノードを動かし、`robot` 側で `cmd_vel_control` を起動することで Go2 が動きます。設計の背景は `docs/adr/0001-voice-teleop.md` を参照してください。
 
 前提:
 
@@ -270,6 +270,7 @@ ros2 topic echo /go2/imu --once
 - `.env` に `VOICE_CAPTURE_DEV`, `VOICE_ASR_BACKEND` が設定済み
 - `VOICE_ASR_BACKEND=parakeet` の場合は `VOICE_ASR_DEVICE`, `VOICE_ASR_MODEL` が設定済み
 - `VOICE_ASR_BACKEND=azure` の場合は `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_API_KEY`, `AZURE_OPENAI_DEPLOYMENT_NAME` が設定済み
+- `VOICE_ASR_BACKEND=azure` で音声応答も使う場合は `aplay` で再生可能な出力デバイスが利用可能
 - `arecord -l` で USB マイクの ALSA デバイス名を確認し `VOICE_CAPTURE_DEV` に反映
 - `make dgx-spark-build && make dgx-spark-up` が済んでいる
 - `make dgx-spark-shell` に入って `make zenoh-build` を一度実行済み
@@ -288,9 +289,9 @@ make zenoh-client
 ros2 run voice_teleop voice_teleop
 ```
 
-対応コマンド (日本語 / 英語): 「前進」「後退」「左」「右」「止まって」 / forward, back, left, right, stop。発話ごとに `COOLDOWN_SEC` 分の抑止が入ります。`parakeet` はローカル energy VAD で発話を切り、`azure` は Azure Realtime の server VAD で発話終端を判定します。
+対応コマンドは backend ごとに異なります。`parakeet` は従来どおり「前進」「後退」「左」「右」「止まって」 / forward, back, left, right, stop を transcript から判定します。`azure` は Azure Realtime の server VAD と function calling を使い、現状は `step_forward` と `stop_robot` を呼び分けます。`step_forward` は短い前進パルスの後に自動停止し、assistant は短い日本語応答をテキスト+音声で返します。
 
-比較時は `.env` の `VOICE_ASR_BACKEND` を切り替えて同じ手順を繰り返します。ログには `backend=...`, `stt_latency_ms=...`, `cmd_latency_ms=...`, `command=...`, `transcript=...` が 1 発話ごとに出るため、同一フレーズを複数回発話して backend ごとの差分を比較できます。`azure` の `stt_latency_ms` は Azure Realtime の `input_audio_buffer.speech_stopped` 受信から確定 transcript 受信までの時間です。
+比較時は `.env` の `VOICE_ASR_BACKEND` を切り替えて同じ手順を繰り返します。`parakeet` は `backend=...`, `stt_latency_ms=...`, `cmd_latency_ms=...`, `command=...`, `transcript=...` を 1 発話ごとに出します。`azure` は `azure_input_transcript`, `azure_tool_call`, `azure_response_done` を出すため、STT 結果・実行 tool・assistant reply を同一発話単位で確認できます。
 
 `dgx-spark` image の ROS 2 Jazzy は Ubuntu 24.04/Noble 向けの公式手順に合わせて `universe` + `ros2-apt-source` で導入しています。加えて、将来 NVIDIA Isaac ROS パッケージを追加できるよう、NVIDIA の Isaac ROS apt repository と rosdep 定義も image 内に登録済みです。`voice_teleop` 自体は Isaac ROS 非依存ですが、DGX Spark 上の GPU ノードを今後増やすときの基盤として扱います。分散モードで DGX Spark 側から topic を publish / subscribe するため、image には `cargo` / `rustc` などの Rust toolchain も入っており、`make dgx-spark-shell` の中で `make zenoh-build` / `make zenoh-client` をそのまま実行できます。
 

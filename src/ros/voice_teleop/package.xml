@@ -2,7 +2,7 @@
 <package format="3">
   <name>voice_teleop</name>
   <version>0.1.0</version>
-  <description>Voice-driven teleop for Go2. Publishes geometry_msgs/Twist on /cmd_vel using either local NVIDIA Parakeet or Azure OpenAI Realtime transcripts.</description>
+  <description>Voice-driven teleop for Go2. Publishes geometry_msgs/Twist on /cmd_vel using either local NVIDIA Parakeet or Azure OpenAI Realtime function calling.</description>
   <maintainer email="n.shiba0101@gmail.com">Naoki Shibahara</maintainer>
   <license>BSD-3-Clause</license>
 
