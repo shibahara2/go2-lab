@@ -3,7 +3,7 @@ SYNC_CONFIGS = ./scripts/sync_configs.sh
 ROS_SRC_PREFIX = src/ros/
 ZENOH_BUILD_ROOTS = src/zenoh src/zenoh-plugin-ros2dds
 
-.PHONY: help build up down ps logs shell sync-configs colcon-build zenoh-build zenoh-client target-build host-deps-install livox-sdk-install
+.PHONY: help build up down ps logs shell sync-configs colcon-build zenoh-build zenoh-client target-build host-deps-install livox-sdk-install dgx-spark-build dgx-spark-up dgx-spark-down dgx-spark-shell
 
 help:
 	@echo "Usage:"
@@ -13,6 +13,7 @@ help:
 	@echo "  make shell                            # enter Jetson container"
 	@echo "  ./scripts/visualization_host_shell.sh # open host shell with auto env/source"
 	@echo "  make sync-configs                     # sync tracked configs into src/ and configs/"
+	@echo "  make dgx-spark-shell                  # enter DGX Spark container with auto env/source"
 	@echo "  make colcon-build                      # build ROS packages under $(ROS_SRC_PREFIX) only"
 	@echo "  make target-build                      # build ROS packages; include zenoh only in distributed mode"
 	@echo "  make zenoh-build                       # distributed mode only"
@@ -100,6 +101,23 @@ host-deps-install:
 	sudo apt-get update && \
 	grep -v '^\s*#' configs/deps/packages.txt | grep -v '^\s*$$' | \
 	xargs sudo apt-get install -y
+	@if [ ! -f /etc/ros/rosdep/sources.list.d/20-default.list ]; then \
+		sudo rosdep init; \
+	fi
+	rosdep update
+	rosdep install --from-paths src/ros --ignore-src -r -y
 
 livox-sdk-install:
 	cd src/Livox-SDK2 && mkdir -p build && cd build && cmake .. && make -j$$(nproc) && sudo make install
+
+dgx-spark-build:
+	$(DOCKER_COMPOSE) --profile dgx-spark build dgx-spark
+
+dgx-spark-up:
+	$(DOCKER_COMPOSE) --profile dgx-spark up -d dgx-spark
+
+dgx-spark-down:
+	$(DOCKER_COMPOSE) --profile dgx-spark down
+
+dgx-spark-shell:
+	$(CURDIR)/scripts/dgx_spark_shell.sh $(CURDIR)

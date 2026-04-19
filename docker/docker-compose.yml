@@ -21,3 +21,27 @@ services:
     container_name: jetson
     ipc: "host"
     runtime: nvidia
+
+  dgx-spark:
+    <<: *common
+    profiles: ["dgx-spark"]
+    platform: ${DGX_SPARK_PLATFORM:-linux/arm64}
+    gpus: all
+    volumes:
+      - ..:/workspace:cached
+      - ${HOME}/.cache/huggingface:/root/.cache/huggingface
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+    devices:
+      - /dev/snd:/dev/snd
+    group_add:
+      - audio
+    env_file: ../.env
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.dgx-spark
+      args:
+        BASE_IMAGE: ${DGX_SPARK_BASE_IMAGE:-nvcr.io/nvidia/pytorch:25.10-py3}
+      network: host
+    image: go2-lab:dgx-spark
+    container_name: dgx-spark
+    ipc: "host"

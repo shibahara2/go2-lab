@@ -1,0 +1,85 @@
+# DGX Spark (arm64, Grace Blackwell + GPU) image for go2-lab.
+# Hosts ML-heavy ROS nodes such as voice_teleop that need CUDA + local ASR.
+# Dependencies are intentionally isolated here rather than on the host.
+# See docs/adr/0003-dgx-spark-container.md.
+
+ARG BASE_IMAGE=nvcr.io/nvidia/pytorch:25.10-py3
+FROM ${BASE_IMAGE}
+
+ARG ROS_APT_SOURCE_VERSION=1.1.0
+ARG ISAAC_ROS_APT_RELEASE=release-4.3
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+USER root
+
+# Configure ROS 2 Jazzy from the official Noble instructions, then add
+# NVIDIA's Isaac ROS repo as an additional package source.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      ca-certificates \
+      curl \
+      gnupg \
+      lsb-release \
+      software-properties-common && \
+    add-apt-repository -y universe && \
+    curl -fsSL -o /tmp/ros2-apt-source.deb \
+      "https://github.com/ros-infrastructure/ros-apt-source/releases/download/${ROS_APT_SOURCE_VERSION}/ros2-apt-source_${ROS_APT_SOURCE_VERSION}.$(. /etc/os-release && echo ${UBUNTU_CODENAME:-${VERSION_CODENAME}})_all.deb" && \
+    dpkg -i /tmp/ros2-apt-source.deb && \
+    rm /tmp/ros2-apt-source.deb && \
+    curl -fsSL https://isaac.download.nvidia.com/isaac-ros/repos.key | gpg --dearmor \
+      -o /usr/share/keyrings/nvidia-isaac-ros.gpg && \
+    echo "deb [signed-by=/usr/share/keyrings/nvidia-isaac-ros.gpg] https://isaac.download.nvidia.com/isaac-ros/${ISAAC_ROS_APT_RELEASE} noble main" \
+      > /etc/apt/sources.list.d/nvidia-isaac-ros.list
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      alsa-utils \
+      cargo \
+      clang \
+      git \
+      libc6-dev \
+      libclang-dev \
+      libssl-dev \
+      linux-libc-dev \
+      pkg-config \
+      python3-colcon-common-extensions \
+      python3-rosdep \
+      python3-websockets \
+      ros-jazzy-geometry-msgs \
+      ros-jazzy-rclpy \
+      ros-jazzy-ros-base \
+      ros-jazzy-rmw-cyclonedds-cpp \
+      rustc \
+      wget \
+ && rosdep init \
+ && curl -fsSL \
+      https://raw.githubusercontent.com/NVIDIA-ISAAC-ROS/isaac-ros-cli/${ISAAC_ROS_APT_RELEASE}/docker/rosdep/extra_rosdeps.yaml \
+      -o /etc/ros/rosdep/sources.list.d/nvidia-isaac.yaml \
+ && echo "yaml file:///etc/ros/rosdep/sources.list.d/nvidia-isaac.yaml" \
+      > /etc/ros/rosdep/sources.list.d/00-nvidia-isaac.list \
+ && rm -rf /var/lib/apt/lists/*
+
+# Python ML deps for voice_teleop.
+# Use a PyTorch base by default because the generic NeMo tag is not reliably arm64.
+# Pin transformers: current NeMo ASR still imports `Conv1D` from
+# `transformers.modeling_utils`, which disappeared in transformers 4.48+.
+# Pin numpy<2: some NeMo/ASR transitive deps still access `np.sctypes`,
+# which was removed in NumPy 2.0 and breaks transcription before /cmd_vel
+# can be published.
+RUN pip install --no-cache-dir \
+      "cuda-python>=12.4,<13" \
+      "nemo_toolkit[asr]" \
+      "numpy<2" \
+      "transformers<4.48" \
+ && pip uninstall -y torchvision flash-attn
+
+# Nice-to-have shell
+RUN apt-get update && apt-get install -y --no-install-recommends zsh && \
+    wget -qO /tmp/install.sh https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh && \
+    chmod +x /tmp/install.sh && /tmp/install.sh --unattended && rm /tmp/install.sh && \
+    rm -rf /var/lib/apt/lists/*
+
+COPY docker/.zshrc /root/.zshrc
+
+SHELL ["/bin/zsh", "-c"]
+WORKDIR /workspace
+CMD ["zsh"]

@@ -20,6 +20,7 @@
   - [6.1 標準モード (`DISTRIBUTED_MODE=0`)](#61-標準モード-distributed_mode0)
   - [6.2 分散モード (`DISTRIBUTED_MODE=1`)](#62-分散モード-distributed_mode1)
   - [6.3 Go2 IMU publisher](#63-go2-imu-publisher)
+  - [6.4 音声 teleop (voice_teleop)](#64-音声-teleop-voice_teleop)
 - [7. 環境変数と設定ファイル](#7-環境変数と設定ファイル)
   - [7.1 主要変数](#71-主要変数)
   - [7.2 `.env` 変更後の `sync-configs`](#72-env-変更後の-sync-configs)
@@ -89,16 +90,16 @@ cp .env.example .env
 make sync-configs
 ```
 
-### 4.2 分散モード: robot + workstation + external router (`DISTRIBUTED_MODE=1`)
+### 4.2 分散モード: robot + workstation/dgx-spark + external router (`DISTRIBUTED_MODE=1`)
 
-分散モードでは `robot` と `workstation` の両方で clone を用意し、それぞれの `.env` を編集します。zenoh router はこの repo では管理せず、外部で起動済みのものに接続します。
+分散モードでは `robot` と、ROS topic を利用するもう一方の計算機 (`workstation` ホストまたは `dgx-spark` コンテナを動かすマシン) の両方で clone を用意し、それぞれの `.env` を編集します。zenoh router はこの repo では管理せず、外部で起動済みのものに接続します。
 
 `robot` 側:
 
 - `DISTRIBUTED_MODE=1`
 - `NETWORK_INTERFACE`: Go2 / MID360 と接続される Jetson 側 IF 名
 - `ZENOH_ROUTER_IP`: 外部 router の IP
-- `ROS_DOMAIN_ID`: workstation 側と揃える
+- `ROS_DOMAIN_ID`: workstation / dgx-spark 側と揃える
 
 設定を反映してコンテナを作成します。
 
@@ -108,10 +109,10 @@ make build
 make up
 ```
 
-`workstation` 側:
+`workstation` または `dgx-spark` 側:
 
 - `DISTRIBUTED_MODE=1`
-- `NETWORK_INTERFACE`: workstation Linux ホストで使う IF 名
+- `NETWORK_INTERFACE`: topic を publish / subscribe する側 Linux 環境で使う IF 名
 - `ZENOH_ROUTER_IP`: 外部 router の IP
 - `ROS_DOMAIN_ID`: robot 側と揃える
 
@@ -150,6 +151,7 @@ make target-build
 
 ```bash
 make shell
+make host-deps-install
 make target-build
 ```
 
@@ -158,6 +160,13 @@ make target-build
 - `make target-build`: 常に `make colcon-build` を実行し、`DISTRIBUTED_MODE=1` のときだけ `make zenoh-build` を追加実行
 - `make colcon-build`: `src/ros` 配下の ROS パッケージをビルド
 - `make zenoh-build`: `src/zenoh` と `src/zenoh-plugin-ros2dds` を `cargo build --release`
+- `make host-deps-install`: `configs/deps/packages.txt` の共通 apt パッケージに加え、`src/ros` 配下の各 `package.xml` を `rosdep install` で解決する
+- `make dgx-spark-shell`: `dgx-spark` コンテナに入り、`/opt/ros/jazzy/setup.zsh` と workspace overlay を auto-source した状態でシェルを開く
+- `make dgx-spark-shell` の中では `make zenoh-build` / `make zenoh-client` も実行可能
+
+### 5.4 Python ノードを追加するときの依存の書き方
+
+Python ノード固有の実行時依存 (PyPI ライブラリ相当 / apt 系ツール) は、そのパッケージの `package.xml` に `<exec_depend>` として rosdep キーで書きます (例: `python3-websockets`, `alsa-utils`)。`configs/deps/packages.txt` には書きません。`make host-deps-install` が `rosdep install --from-paths src/ros` を呼ぶため、package.xml 側の宣言だけで workstation / Jetson どちらにもインストールされます。rosdep で解決できないライブラリが必要になった場合は、方針転換として ADR を起票してください。背景は `docs/adr/0002-python-deps.md` を参照。
 
 ## 6. 起動順
 
@@ -204,17 +213,22 @@ ros2 launch livox_ros_driver2 msg_MID360_launch.py
 ros2 launch fast_lio mapping.launch.py config_file:=mid360.yaml rviz:=false
 ```
 
-1. `workstation` 側で zenoh client を起動する
+1. `workstation` または `dgx-spark` 側で zenoh client を起動する
 
 ```bash
 make zenoh-client
 ```
 
-1. `workstation` 側で topic と RViz を確認する
+1. `workstation` または `dgx-spark` 側で topic を確認する
 
 ```bash
 ros2 topic list
 ros2 topic echo /Odometry --once
+```
+
+`workstation` で可視化する場合:
+
+```bash
 ./scripts/visualization_host_shell.sh
 rviz2
 ```
@@ -244,6 +258,44 @@ ros2 run imu_publisher imu_publisher
 ros2 topic echo /go2/imu --once
 ```
 
+### 6.4 音声 teleop (voice_teleop)
+
+`dgx-spark` コンテナ内で発話をトランスクリプトし、キーワードから `geometry_msgs/Twist` を `/cmd_vel` に publish します。STT backend はローカル NVIDIA Parakeet (`nvidia/parakeet-tdt_ctc-0.6b-ja`) と Azure OpenAI Realtime API を `VOICE_ASR_BACKEND` で切り替えできます。`cmd_vel_control` が `/cmd_vel` を `/api/sport/request` に変換するため、DGX Spark 側で本ノードを動かし、`robot` 側で `cmd_vel_control` を起動することで Go2 が動きます。設計の背景は `docs/adr/0001-voice-teleop.md` を参照してください。
+
+前提:
+
+- `DISTRIBUTED_MODE=1` の分散モードで `robot` 側と `dgx-spark` 側の zenoh-client、および external router が稼働中
+- `robot` 側で `ros2 run cmd_vel_control cmd_vel_control` が起動済み
+- Go2 の sport_mode が操作可能な状態 (アンロック) になっていること
+- `.env` に `VOICE_CAPTURE_DEV`, `VOICE_ASR_BACKEND` が設定済み
+- `VOICE_ASR_BACKEND=parakeet` の場合は `VOICE_ASR_DEVICE`, `VOICE_ASR_MODEL` が設定済み
+- `VOICE_ASR_BACKEND=azure` の場合は `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_API_KEY`, `AZURE_OPENAI_DEPLOYMENT_NAME` が設定済み
+- `arecord -l` で USB マイクの ALSA デバイス名を確認し `VOICE_CAPTURE_DEV` に反映
+- `make dgx-spark-build && make dgx-spark-up` が済んでいる
+- `make dgx-spark-shell` に入って `make zenoh-build` を一度実行済み
+
+疎通確認 (voice_teleop 起動前):
+
+```bash
+ros2 topic pub --once /cmd_vel geometry_msgs/msg/Twist '{linear: {x: 0.3}}'
+```
+
+起動 (`dgx-spark` コンテナ):
+
+```bash
+make dgx-spark-shell
+make zenoh-client
+ros2 run voice_teleop voice_teleop
+```
+
+対応コマンド (日本語 / 英語): 「前進」「後退」「左」「右」「止まって」 / forward, back, left, right, stop。発話ごとに `COOLDOWN_SEC` 分の抑止が入ります。`parakeet` はローカル energy VAD で発話を切り、`azure` は Azure Realtime の server VAD で発話終端を判定します。
+
+比較時は `.env` の `VOICE_ASR_BACKEND` を切り替えて同じ手順を繰り返します。ログには `backend=...`, `stt_latency_ms=...`, `cmd_latency_ms=...`, `command=...`, `transcript=...` が 1 発話ごとに出るため、同一フレーズを複数回発話して backend ごとの差分を比較できます。`azure` の `stt_latency_ms` は Azure Realtime の `input_audio_buffer.speech_stopped` 受信から確定 transcript 受信までの時間です。
+
+`dgx-spark` image の ROS 2 Jazzy は Ubuntu 24.04/Noble 向けの公式手順に合わせて `universe` + `ros2-apt-source` で導入しています。加えて、将来 NVIDIA Isaac ROS パッケージを追加できるよう、NVIDIA の Isaac ROS apt repository と rosdep 定義も image 内に登録済みです。`voice_teleop` 自体は Isaac ROS 非依存ですが、DGX Spark 上の GPU ノードを今後増やすときの基盤として扱います。分散モードで DGX Spark 側から topic を publish / subscribe するため、image には `cargo` / `rustc` などの Rust toolchain も入っており、`make dgx-spark-shell` の中で `make zenoh-build` / `make zenoh-client` をそのまま実行できます。
+
+`dgx-spark` コンテナ内で ROS コマンドを使う場合は、素の `docker exec` ではなく `make dgx-spark-shell` を使ってください。ROS 2 と `install/setup.zsh` が自動で source されます。
+
 ## 7. 環境変数と設定ファイル
 
 各 clone の `.env` から必要な設定を生成します。固定値だけの設定は `src/ros/...` を直接編集し、変数展開が必要な設定だけテンプレートから再生成します。
@@ -261,8 +313,6 @@ ros2 topic echo /go2/imu --once
 | `LIDAR_DEVICE_IP` | `src/ros/livox_ros_driver2/config/MID360_config.json` | LiDAR 本体 IP |
 | `RMW_IMPLEMENTATION` | `src/ros/unitree_ros2/setup.sh`, `scripts/visualization_host_shell.sh` | ROS 2 ミドルウェア実装 |
 | `ROS_DOMAIN_ID` | `scripts/visualization_host_shell.sh` | ROS 2 ドメイン ID |
-| `DOCKER_SHM_SIZE` | `.env.example` | Docker 用の共有メモリサイズ設定 |
-| `LIDAR_DATASET_PATH` | `.env.example` | 任意データパスの予約変数 |
 
 ### 7.2 `.env` 変更後の `sync-configs`
 
@@ -277,6 +327,8 @@ ros2 topic echo /go2/imu --once
 ## 8. 補足
 
 Jetson で複数ターミナルを開いて作業する場合は、SSH multiplexing や zellij レイアウトを使うと運用しやすくなります。ただし、これらは本リポジトリの必須要件ではありません。
+
+DGX Spark プロファイル (`make dgx-spark-build`, `make dgx-spark-up`) は Docker Compose の GPU 要求 (`gpus: all`) を使います。ホスト側では NVIDIA driver と Docker の GPU 連携が有効である必要がありますが、Docker daemon に `nvidia` runtime 名を登録しておく必要はありません。
 
 ## 9. トラブルシュート
 
