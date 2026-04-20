@@ -337,10 +337,13 @@ make up
 make shell
 rm -rf build/ install/ log/
 make colcon-build
+# コード変更後や install/ を作り直した直後は、同じシェルで overlay を再sourceすること
 source install/setup.bash
 python3 -c "import sys, websockets; print(sys.version); print(sys.executable); print(websockets.__version__); print(websockets.__file__)"
 ros2 run voice_teleop voice_teleop
 ```
+
+`make shell` はシェル起動時点の `/workspace/install/setup.zsh` を auto-source するだけです。`rm -rf build/ install/ log/ && make colcon-build` のあとに同じシェルで `source install/setup.bash` をやり直さないと、新しい install tree が反映されず `ros2 run` で `PackageNotFoundError: No package metadata was found for voice-teleop` になることがあります。
 
 `azure` backend で `As of 3.10, the *loop* parameter was removed from Lock()` のようなエラーが出る場合、Jetson image 内の apt `python3-websockets` が古すぎます。`make build && make up` で image を更新し直したあと、container 内で workspace を rebuild してください。確認コマンドの出力は `python3` が `/usr/bin/python3`、`websockets.__file__` が `/usr/local/lib/python3.10/dist-packages/...` を指していれば正常です。
 
