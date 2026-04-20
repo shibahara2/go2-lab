@@ -199,7 +199,7 @@ make zenoh-build
 
 ### 5.5 Python ノードを追加するときの依存の書き方
 
-Python ノード固有の実行時依存 (PyPI ライブラリ相当 / apt 系ツール) は、そのパッケージの `package.xml` に `<exec_depend>` として rosdep キーで書きます (例: `python3-websockets`, `alsa-utils`)。`configs/deps/packages.txt` には書きません。`make host-deps-install` が `rosdep install --from-paths src/ros` を呼ぶため、package.xml 側の宣言だけで workstation / Jetson どちらにもインストールされます。rosdep で解決できないライブラリが必要になった場合は、方針転換として ADR を起票してください。背景は `docs/adr/0002-python-deps.md` を参照。
+Python ノード固有の実行時依存 (PyPI ライブラリ相当 / apt 系ツール) は、そのパッケージの `package.xml` に `<exec_depend>` として rosdep キーで書きます (例: `python3-websockets`, `alsa-utils`)。正本は `package.xml` です。`make host-deps-install` が `rosdep install --from-paths src/ros` を呼ぶため、通常は package.xml 側の宣言だけで workstation / Jetson どちらにもインストールされます。加えて、コンテナ起動直後から使いたい共通ランタイム依存だけは image bootstrap 用に `configs/deps/packages.txt` へ重複記載して構いません。rosdep で解決できないライブラリが必要になった場合は、方針転換として ADR を起票してください。背景は `docs/adr/0002-python-deps.md` を参照。
 
 ## 6. 起動順
 
@@ -293,20 +293,27 @@ ros2 topic echo /go2/imu --once
 
 ### 6.4 音声 teleop (voice_teleop)
 
-`dgx-spark` コンテナ内で発話から `geometry_msgs/Twist` を `/cmd_vel` に publish します。STT backend はローカル NVIDIA Parakeet (`nvidia/parakeet-tdt_ctc-0.6b-ja`) と Azure OpenAI Realtime API を `VOICE_ASR_BACKEND` で切り替えできます。`parakeet` はローカル transcript をキーワード判定して `/cmd_vel` を出し、`azure` は Realtime API の STT -> LLM -> function calling で `step_forward` / `stop_robot` を選び、日本語の短い assistant reply をテキスト+音声で返します。`cmd_vel_control` が `/cmd_vel` を `/api/sport/request` に変換するため、DGX Spark 側で本ノードを動かし、`robot` 側で `cmd_vel_control` を起動することで Go2 が動きます。設計の背景は `docs/adr/0001-voice-teleop.md` を参照してください。
+`voice_teleop` は発話から `geometry_msgs/Twist` を `/cmd_vel` に publish します。STT backend はローカル NVIDIA Parakeet (`nvidia/parakeet-tdt_ctc-0.6b-ja`) と Azure OpenAI Realtime API を `VOICE_ASR_BACKEND` で切り替えできます。`parakeet` はローカル transcript をキーワード判定して `/cmd_vel` を出し、`azure` は Realtime API の STT -> LLM -> function calling で `step_forward` / `stop_robot` を選び、日本語の短い assistant reply をテキスト+音声で返します。`cmd_vel_control` が `/cmd_vel` を `/api/sport/request` に変換するため、`voice_teleop` を `robot` または `dgx-spark` のどちらで動かしても、`robot` 側で `cmd_vel_control` が起動していれば Go2 が動きます。設計の背景は `docs/adr/0001-voice-teleop.md` を参照してください。
+
+backend と実行場所の対応:
+
+- `VOICE_ASR_BACKEND=azure`: `robot` の Jetson コンテナ、または `dgx-spark` コンテナで実行可能
+- `VOICE_ASR_BACKEND=parakeet`: `dgx-spark` コンテナのみサポート
 
 前提:
 
-- `DISTRIBUTED_MODE=1` の分散モードで `robot` 側と `dgx-spark` 側の zenoh-client、および external router が稼働中
+- `DISTRIBUTED_MODE=1` の分散モードで external router が稼働中
 - `robot` 側で `ros2 run cmd_vel_control cmd_vel_control` が起動済み
 - Go2 の sport_mode が操作可能な状態 (アンロック) になっていること
 - `.env` に `VOICE_CAPTURE_DEV`, `VOICE_ASR_BACKEND` が設定済み
-- `VOICE_ASR_BACKEND=parakeet` の場合は `VOICE_ASR_DEVICE`, `VOICE_ASR_MODEL` が設定済み
+- `VOICE_ASR_BACKEND=parakeet` の場合は `VOICE_ASR_DEVICE`, `VOICE_ASR_MODEL` が設定済みで、`dgx-spark` 側を使う
 - `VOICE_ASR_BACKEND=azure` の場合は `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_API_KEY`, `AZURE_OPENAI_DEPLOYMENT_NAME` が設定済み
 - `VOICE_ASR_BACKEND=azure` で音声応答も使う場合は `aplay` で再生可能な出力デバイスが利用可能
 - `arecord -l` で USB マイクの ALSA デバイス名を確認し `VOICE_CAPTURE_DEV` に反映
-- `make dgx-spark-build && make dgx-spark-up` が済んでいる
-- `make dgx-spark-shell` に入って `make zenoh-build` を一度実行済み
+- `robot` で実行する場合は `make build && make up` が済んでいる
+- `dgx-spark` で実行する場合は `make dgx-spark-build && make dgx-spark-up` が済んでいる
+- 分散モードで `voice_teleop` を `dgx-spark` 側で動かす場合は、`robot` 側と `dgx-spark` 側の zenoh-client が起動済み
+- 分散モードで `voice_teleop` を `robot` 側で動かす場合は、少なくとも `robot` 側の zenoh-client が起動済み
 
 疎通確認 (voice_teleop 起動前):
 
@@ -314,11 +321,34 @@ ros2 topic echo /go2/imu --once
 ros2 topic pub --once /cmd_vel geometry_msgs/msg/Twist '{linear: {x: 0.3}}'
 ```
 
-起動 (`dgx-spark` コンテナ):
+起動 (`robot`, `VOICE_ASR_BACKEND=azure`):
+
+ターミナル 1:
+
+```bash
+make zenoh-client
+```
+
+ターミナル 2:
+
+```bash
+make shell
+source install/setup.bash
+ros2 run voice_teleop voice_teleop
+```
+
+起動 (`dgx-spark`, `VOICE_ASR_BACKEND=azure` または `parakeet`):
+
+ターミナル 1:
+
+```bash
+make zenoh-client
+```
+
+ターミナル 2:
 
 ```bash
 make dgx-spark-shell
-make zenoh-client
 ros2 run voice_teleop voice_teleop
 ```
 
@@ -326,7 +356,7 @@ ros2 run voice_teleop voice_teleop
 
 比較時は `.env` の `VOICE_ASR_BACKEND` を切り替えて同じ手順を繰り返します。`parakeet` は `backend=...`, `stt_latency_ms=...`, `cmd_latency_ms=...`, `command=...`, `transcript=...` を 1 発話ごとに出します。`azure` は `azure_input_transcript`, `azure_tool_call`, `azure_response_done` を出すため、STT 結果・実行 tool・assistant reply を同一発話単位で確認できます。
 
-`dgx-spark` image の ROS 2 Jazzy は Ubuntu 24.04/Noble 向けの公式手順に合わせて `universe` + `ros2-apt-source` で導入しています。加えて、将来 NVIDIA Isaac ROS パッケージを追加できるよう、NVIDIA の Isaac ROS apt repository と rosdep 定義も image 内に登録済みです。`voice_teleop` 自体は Isaac ROS 非依存ですが、DGX Spark 上の GPU ノードを今後増やすときの基盤として扱います。分散モードで DGX Spark 側から topic を publish / subscribe するため、image には `cargo` / `rustc` などの Rust toolchain も入っており、`make dgx-spark-shell` の中で `make zenoh-build` / `make zenoh-client` をそのまま実行できます。
+`dgx-spark` image の ROS 2 Jazzy は Ubuntu 24.04/Noble 向けの公式手順に合わせて `universe` + `ros2-apt-source` で導入しています。加えて、将来 NVIDIA Isaac ROS パッケージを追加できるよう、NVIDIA の Isaac ROS apt repository と rosdep 定義も image 内に登録済みです。`voice_teleop` 自体は Isaac ROS 非依存ですが、DGX Spark 上の GPU ノードを今後増やすときの基盤として扱います。分散モードで DGX Spark 側から topic を publish / subscribe するため、image には `cargo` / `rustc` などの Rust toolchain も入っており、`make dgx-spark-shell` の中で `make zenoh-build` / `make zenoh-client` をそのまま実行できます。`robot` 側の Jetson コンテナは `azure` backend の軽量依存だけを持ち、`parakeet` 用の ML 依存は持ち込みません。
 
 `dgx-spark` コンテナ内で ROS コマンドを使う場合は、素の `docker exec` ではなく `make dgx-spark-shell` を使ってください。ROS 2 と `install/setup.zsh` が自動で source されます。
 

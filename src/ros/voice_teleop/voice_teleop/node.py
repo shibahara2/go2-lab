@@ -873,7 +873,13 @@ def build_azure_realtime_uri(endpoint: str, deployment_name: str) -> str:
 def create_parakeet_asr_engine() -> AsrEngine:
     asr_device = os.environ.get("VOICE_ASR_DEVICE", "cuda")
     asr_model = os.environ.get("VOICE_ASR_MODEL", "nvidia/parakeet-tdt_ctc-0.6b-ja")
-    return ParakeetAsrEngine(asr_model, asr_device)
+    try:
+        return ParakeetAsrEngine(asr_model, asr_device)
+    except ImportError as exc:
+        raise RuntimeError(
+            "parakeet backend requires torch and nemo_toolkit, which are installed "
+            "only in the dgx-spark container; use VOICE_ASR_BACKEND=azure on robot/Jetson"
+        ) from exc
 
 
 def create_azure_realtime_session(node: VoiceTeleopNode) -> AzureRealtimeSession:

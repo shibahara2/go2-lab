@@ -14,7 +14,7 @@ setup(
     zip_safe=True,
     maintainer="Naoki Shibahara",
     maintainer_email="n.shiba0101@gmail.com",
-    description="Voice-driven teleop for Go2 via Parakeet or Azure Speech STT.",
+    description="Voice-driven teleop for Go2 via Parakeet or Azure OpenAI Realtime.",
     license="BSD-3-Clause",
     entry_points={
         "console_scripts": [

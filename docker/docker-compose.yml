@@ -10,6 +10,10 @@ services:
     volumes:
       - ..:/workspace:cached
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
+    devices:
+      - /dev/snd:/dev/snd
+    group_add:
+      - audio
     env_file: ../.env
     build:
       context: ..

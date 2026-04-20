@@ -13,10 +13,10 @@
   <exec_depend>alsa-utils</exec_depend>
   <exec_depend>python3-websockets</exec_depend>
   <!--
-    Python runtime dependencies without rosdep keys
-    (torch, nemo_toolkit, numpy)
-    have no rosdep keys and are installed inside docker/Dockerfile.dgx-spark.
-    See docs/adr/0003-dgx-spark-container.md.
+    `azure` backend runs on both robot/Jetson and dgx-spark using the rosdep
+    keys above. `parakeet` additionally needs Python runtime dependencies
+    without rosdep keys (torch, nemo_toolkit, numpy), which remain installed
+    only inside docker/Dockerfile.dgx-spark. See docs/adr/0003-dgx-spark-container.md.
   -->
 
   <test_depend>ament_copyright</test_depend>

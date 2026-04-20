@@ -45,3 +45,7 @@ voice_teleop のような重量 ML ノードは **プラットフォーム単位
 - `dgx-spark` image は ROS 公式 apt source と Isaac ROS apt source の両方を持つため、将来 Isaac ROS パッケージを追加するときに Dockerfile 変更は最小限で済む。
 - 既存 `jetson` サービスと DGX Spark は同時起動可能だが、両方とも `network_mode: host` なので ROS_DOMAIN_ID / zenoh ポートの衝突に注意する運用ルールは別途必要。
 - 将来 DGX Spark 上で別の ML ノードが増えた場合、`Dockerfile.dgx-spark` に pip 追加するだけで本 ADR の再評価は不要。依存トポロジが大きく変わる場合のみ新 ADR を起票する。
+
+## Addendum
+
+- 2026-04-21: `voice_teleop` の lightweight backend として Azure OpenAI Realtime (`VOICE_ASR_BACKEND=azure`) を `robot` の Jetson コンテナでも正式サポートした。`parakeet` は引き続き ML-heavy backend として `dgx-spark` 専用に据え置く。`robot` 側では `/dev/snd` を Jetson コンテナへ渡し、`alsa-utils` / `python3-websockets` などの軽量依存だけを共通 runtime に追加する。
