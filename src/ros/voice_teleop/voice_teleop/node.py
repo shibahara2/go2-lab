@@ -29,8 +29,10 @@ FRAME_BYTES = FRAME_SAMPLES * 2
 
 COOLDOWN_SEC = 0.4
 LINEAR_SPEED = 0.5
-ANGULAR_SPEED = 0.8
 STEP_FORWARD_SEC = 0.3
+MOTION_TICK_SEC = 0.1
+STOP_BURST_SEC = 0.3
+STOP_BURST_TICKS = max(1, math.ceil(STOP_BURST_SEC / MOTION_TICK_SEC))
 
 VAD_PREFIX_PADDING_MS = 300
 VAD_START_SPEECH_MS = 90
@@ -44,8 +46,7 @@ VAD_THRESHOLD_RATIO = 2.3
 @dataclass(frozen=True)
 class CommandMatch:
     name: str
-    linear_x: float
-    angular_z: float
+    action: str
 
 
 @dataclass(frozen=True)
@@ -160,6 +161,12 @@ class VoiceTeleopNode(Node):
     def __init__(self) -> None:
         super().__init__("voice_teleop")
         self.pub = self.create_publisher(Twist, "/cmd_vel", 10)
+        self._motion_lock = threading.Lock()
+        self._motion_linear_x = 0.0
+        self._motion_angular_z = 0.0
+        self._motion_deadline = 0.0
+        self._stop_publish_remaining = 0
+        self._motion_timer = self.create_timer(MOTION_TICK_SEC, self._on_motion_tick)
         self.get_logger().info("voice_teleop node ready; publishing Twist on /cmd_vel")
 
     def publish_twist(self, linear_x: float, angular_z: float) -> None:
@@ -172,12 +179,40 @@ class VoiceTeleopNode(Node):
         )
 
     def stop_robot(self) -> None:
-        self.publish_twist(0.0, 0.0)
+        self._start_stop_burst(immediate=True)
 
     def step_forward(self) -> None:
         self.publish_twist(LINEAR_SPEED, 0.0)
-        time.sleep(STEP_FORWARD_SEC)
-        self.stop_robot()
+        with self._motion_lock:
+            self._motion_linear_x = LINEAR_SPEED
+            self._motion_angular_z = 0.0
+            self._motion_deadline = time.monotonic() + STEP_FORWARD_SEC
+            self._stop_publish_remaining = 0
+
+    def _start_stop_burst(self, immediate: bool) -> None:
+        with self._motion_lock:
+            self._motion_linear_x = 0.0
+            self._motion_angular_z = 0.0
+            self._motion_deadline = 0.0
+            self._stop_publish_remaining = STOP_BURST_TICKS - 1 if immediate else STOP_BURST_TICKS
+        if immediate:
+            self.publish_twist(0.0, 0.0)
+
+    def _on_motion_tick(self) -> None:
+        publish = None
+        with self._motion_lock:
+            now = time.monotonic()
+            if now < self._motion_deadline:
+                publish = (self._motion_linear_x, self._motion_angular_z)
+            elif self._motion_deadline > 0.0:
+                self._motion_deadline = 0.0
+                self._stop_publish_remaining = STOP_BURST_TICKS - 1
+                publish = (0.0, 0.0)
+            elif self._stop_publish_remaining > 0:
+                self._stop_publish_remaining -= 1
+                publish = (0.0, 0.0)
+        if publish is not None:
+            self.publish_twist(*publish)
 
 
 def detect_command(text: str) -> CommandMatch | None:
@@ -186,15 +221,9 @@ def detect_command(text: str) -> CommandMatch | None:
         return None
     t_lower = t.lower()
     if any(k in t for k in ["止ま", "停止", "ストップ", "やめ"]) or "stop" in t_lower:
-        return CommandMatch("stop", 0.0, 0.0)
-    if any(k in t for k in ["左", "ひだり"]) or "left" in t_lower:
-        return CommandMatch("left", 0.0, ANGULAR_SPEED)
-    if any(k in t for k in ["右", "みぎ"]) or "right" in t_lower:
-        return CommandMatch("right", 0.0, -ANGULAR_SPEED)
-    if any(k in t for k in ["後退", "下がっ", "バック", "後ろ"]) or "back" in t_lower:
-        return CommandMatch("back", -LINEAR_SPEED, 0.0)
+        return CommandMatch("stop", "stop_robot")
     if any(k in t for k in ["前進", "進ん", "進め", "まっすぐ", "前に", "前へ"]) or "forward" in t_lower:
-        return CommandMatch("forward", LINEAR_SPEED, 0.0)
+        return CommandMatch("forward", "step_forward")
     return None
 
 
@@ -926,11 +955,13 @@ def handle_asr_result(
     now = time.time()
     published = False
     cmd_latency_ms = (transcript_ready_ts - utterance_end_ts) * 1000.0
+    action = "-"
     if cmd is not None and now - last_action_ts >= COOLDOWN_SEC:
-        node.publish_twist(cmd.linear_x, cmd.angular_z)
+        getattr(node, cmd.action)()
         last_action_ts = time.time()
         cmd_latency_ms = (last_action_ts - utterance_end_ts) * 1000.0
         published = True
+        action = cmd.action
     node.get_logger().info(
         "asr_result "
         f"backend={backend_name} "
@@ -939,6 +970,7 @@ def handle_asr_result(
         f"cmd_latency_ms={cmd_latency_ms:.1f} "
         f"published={int(published)} "
         f"command={cmd.name if cmd else '-'} "
+        f"action={action} "
         f"transcript={text!r}"
     )
     return last_action_ts

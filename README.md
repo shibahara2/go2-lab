@@ -142,9 +142,16 @@ TODO
 
 ### 4.3 共通
 
-初回のみ Livox SDK2 をインストールします。対象は `robot` または Livox を直接扱う `workstation` で、`dgx-spark` では実行しません。
+初回のみ Livox SDK2 をインストールします。対象は `robot` または Livox を直接扱う `workstation` で、`dgx-spark` では実行しません。`workstation` ではホスト用シェルから実行し、`robot` では Jetson ホストではなく `make shell` で入った Jetson コンテナ内で実行します。
 
 ```bash
+make livox-sdk-install
+```
+
+`robot` 側の例:
+
+```bash
+make shell
 make livox-sdk-install
 ```
 
@@ -315,7 +322,7 @@ make zenoh-client
 ros2 run voice_teleop voice_teleop
 ```
 
-対応コマンドは backend ごとに異なります。`parakeet` は従来どおり「前進」「後退」「左」「右」「止まって」 / forward, back, left, right, stop を transcript から判定します。`azure` は Azure Realtime の server VAD と function calling を使い、現状は `step_forward` と `stop_robot` を呼び分けます。`step_forward` は短い前進パルスの後に自動停止し、assistant は短い日本語応答をテキスト+音声で返します。
+対応コマンドは backend 共通で「前進」と「止まって」だけです。`parakeet` は transcript をローカル判定して `step_forward` / `stop_robot` 相当の動作を実行し、`azure` は Azure Realtime の server VAD と function calling で同じ 2 アクションを呼び分けます。`step_forward` は約 0.3 秒の短い前進パルスを出した後、停止 `Twist` を複数回 publish して確実に止めます。assistant は短い日本語応答をテキスト+音声で返します。
 
 比較時は `.env` の `VOICE_ASR_BACKEND` を切り替えて同じ手順を繰り返します。`parakeet` は `backend=...`, `stt_latency_ms=...`, `cmd_latency_ms=...`, `command=...`, `transcript=...` を 1 発話ごとに出します。`azure` は `azure_input_transcript`, `azure_tool_call`, `azure_response_done` を出すため、STT 結果・実行 tool・assistant reply を同一発話単位で確認できます。
 

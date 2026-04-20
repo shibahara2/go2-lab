@@ -39,6 +39,9 @@ def load_node_module():
         def create_publisher(self, *_args, **_kwargs):
             return types.SimpleNamespace(publish=lambda _msg: None)
 
+        def create_timer(self, *_args, **_kwargs):
+            return types.SimpleNamespace(cancel=lambda: None)
+
         def get_logger(self):
             return types.SimpleNamespace(
                 info=lambda *_args, **_kwargs: None,
@@ -62,8 +65,8 @@ def test_detect_command_handles_japanese_and_case_insensitive_english():
     node = load_node_module()
 
     assert node.detect_command("前進してください").name == "forward"
-    assert node.detect_command("RIGHT").name == "right"
     assert node.detect_command("Stop now").name == "stop"
+    assert node.detect_command("RIGHT") is None
     assert node.detect_command("雑談です") is None
 
 
@@ -122,7 +125,16 @@ def make_fake_node(node_module):
     fake_node = types.SimpleNamespace(
         get_logger=lambda: logger,
         publish_twist=lambda linear_x, angular_z: published.append((linear_x, angular_z)),
+        _motion_lock=threading.Lock(),
+        _motion_linear_x=0.0,
+        _motion_angular_z=0.0,
+        _motion_deadline=0.0,
+        _stop_publish_remaining=0,
     )
+    fake_node._start_stop_burst = lambda immediate: node_module.VoiceTeleopNode._start_stop_burst(
+        fake_node, immediate
+    )
+    fake_node._on_motion_tick = lambda: node_module.VoiceTeleopNode._on_motion_tick(fake_node)
     fake_node.stop_robot = lambda: node_module.VoiceTeleopNode.stop_robot(fake_node)
     fake_node.step_forward = lambda: node_module.VoiceTeleopNode.step_forward(fake_node)
     return fake_node, published, records
@@ -214,8 +226,9 @@ def test_azure_tool_call_dispatches_step_forward_and_returns_output():
     session, _fake_node, published, records, queued = make_session(node)
     session._latest_input_transcript = "前進して"
 
-    original_sleep = node.time.sleep
-    node.time.sleep = lambda _sec: None
+    original_monotonic = node.time.monotonic
+    values = iter([10.0, 10.1, 10.2, 10.31, 10.41, 10.51])
+    node.time.monotonic = lambda: next(values)
     try:
         session._handle_server_event(
             {
@@ -232,6 +245,8 @@ def test_azure_tool_call_dispatches_step_forward_and_returns_output():
         )
         pending = session._action_queue.get_nowait()
         output = session._execute_tool_call(pending)
+        for _ in range(4):
+            session._node._on_motion_tick()
         session._queue_client_event(
             {
                 "type": "conversation.item.create",
@@ -244,9 +259,15 @@ def test_azure_tool_call_dispatches_step_forward_and_returns_output():
         )
         session._queue_followup_response()
     finally:
-        node.time.sleep = original_sleep
+        node.time.monotonic = original_monotonic
 
-    assert published == [(node.LINEAR_SPEED, 0.0), (0.0, 0.0)]
+    assert published == [
+        (node.LINEAR_SPEED, 0.0),
+        (node.LINEAR_SPEED, 0.0),
+        (node.LINEAR_SPEED, 0.0),
+        (0.0, 0.0),
+        (0.0, 0.0),
+    ]
     assert any("azure_tool_call_completed name=step_forward" in message for message in records["info"])
     assert queued[0]["item"]["call_id"] == "call-1"
     assert queued[1] == {
@@ -293,8 +314,10 @@ def test_stop_robot_tool_publishes_zero_twist():
     output = session._execute_tool_call(
         node.PendingToolCall(call_id="call-2", name="stop_robot", arguments_json="{}")
     )
+    session._node._on_motion_tick()
+    session._node._on_motion_tick()
 
-    assert published == [(0.0, 0.0)]
+    assert published == [(0.0, 0.0), (0.0, 0.0), (0.0, 0.0)]
     assert output["executed"] == "stop_robot"
     assert any("azure_tool_call_completed name=stop_robot" in message for message in records["info"])
 
@@ -304,19 +327,83 @@ def test_step_forward_tool_runs_even_for_non_movement_transcript():
     session, _fake_node, published, records, _queued = make_session(node)
     session._latest_input_transcript = "こんにちは"
 
-    original_sleep = node.time.sleep
-    node.time.sleep = lambda _sec: None
+    original_monotonic = node.time.monotonic
+    values = iter([20.0, 20.1, 20.2, 20.31, 20.41, 20.51])
+    node.time.monotonic = lambda: next(values)
     try:
         output = session._execute_tool_call(
             node.PendingToolCall(call_id="call-3", name="step_forward", arguments_json="{}")
         )
+        for _ in range(4):
+            session._node._on_motion_tick()
     finally:
-        node.time.sleep = original_sleep
+        node.time.monotonic = original_monotonic
 
-    assert published == [(node.LINEAR_SPEED, 0.0), (0.0, 0.0)]
+    assert published == [
+        (node.LINEAR_SPEED, 0.0),
+        (node.LINEAR_SPEED, 0.0),
+        (node.LINEAR_SPEED, 0.0),
+        (0.0, 0.0),
+        (0.0, 0.0),
+    ]
     assert output["ok"] is True
     assert output["executed"] == "step_forward"
     assert any("azure_tool_call_completed name=step_forward" in message for message in records["info"])
+
+
+def test_step_forward_can_be_interrupted_by_stop_robot():
+    node = load_node_module()
+    fake_node, published, _records = make_fake_node(node)
+
+    original_monotonic = node.time.monotonic
+    values = iter([30.0, 30.1, 30.2])
+    node.time.monotonic = lambda: next(values)
+    try:
+        fake_node.step_forward()
+        fake_node._on_motion_tick()
+        fake_node.stop_robot()
+        fake_node._on_motion_tick()
+    finally:
+        node.time.monotonic = original_monotonic
+
+    assert published == [
+        (node.LINEAR_SPEED, 0.0),
+        (node.LINEAR_SPEED, 0.0),
+        (0.0, 0.0),
+        (0.0, 0.0),
+    ]
+
+
+def test_handle_asr_result_uses_shared_actions_for_parakeet():
+    node = load_node_module()
+    fake_node, published, records = make_fake_node(node)
+
+    last_action_ts = node.handle_asr_result(
+        fake_node,
+        "parakeet",
+        node.AsrResult("前進してください", latency_ms=12.0, utterance_ms=400.0, utterance_end_ts=1.0),
+        last_action_ts=0.0,
+    )
+
+    assert last_action_ts > 0.0
+    assert published == [(node.LINEAR_SPEED, 0.0)]
+    assert any("action=step_forward" in message for message in records["info"])
+
+
+def test_handle_asr_result_ignores_removed_parakeet_commands():
+    node = load_node_module()
+    fake_node, published, records = make_fake_node(node)
+
+    last_action_ts = node.handle_asr_result(
+        fake_node,
+        "parakeet",
+        node.AsrResult("右へ", latency_ms=12.0, utterance_ms=400.0, utterance_end_ts=1.0),
+        last_action_ts=0.0,
+    )
+
+    assert last_action_ts == 0.0
+    assert published == []
+    assert any("command=-" in message and "action=-" in message for message in records["info"])
 
 
 def test_azure_tool_call_is_dispatched_only_after_output_item_done():

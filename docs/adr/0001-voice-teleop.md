@@ -51,3 +51,4 @@ workstation から発話で Go2 を動かすエンドツーエンドの経路を
 - 2026-04-19: 比較実験のため、`voice_teleop` は `VOICE_ASR_BACKEND` でローカル Parakeet と Azure Speech Service を切り替え可能にした。VAD と `/cmd_vel` publish 経路は共通化し、backend ごとの差分は transcript と計測ログに限定する。
 - 2026-04-20: Azure backend を Azure OpenAI Realtime API に戻した。`parakeet` は既存のローカル energy VAD を維持し、`azure` はローカル VAD を通さず Realtime API の `server_vad` と input audio transcription を使う。コマンド判定と `/cmd_vel` publish は共通のままとする。
 - 2026-04-20: Azure backend は transcript をローカル判定せず、Realtime API の STT -> LLM -> function calling を正本にする。利用可能 tool は `step_forward` と `stop_robot` とし、assistant reply は短い日本語をテキスト+音声で返す。
+- 2026-04-20: 実運用では単発の停止 publish だと分散経路上で停止が弱かったため、`step_forward` は約 0.3 秒の前進 publish 群の後に停止 publish 群を送る方式へ変更した。`parakeet` も同じ 2 アクション (`step_forward`, `stop_robot`) に揃え、独自の `back/left/right` は削除した。
