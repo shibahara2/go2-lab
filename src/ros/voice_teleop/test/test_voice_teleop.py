@@ -107,6 +107,75 @@ def test_parse_azure_openai_env_helpers_and_realtime_uri():
         raise AssertionError("expected ValueError for invalid endpoint")
 
 
+def test_parse_positive_float_env_uses_default_when_unset():
+    node = load_node_module()
+
+    previous = node.os.environ.pop("VOICE_STEP_FORWARD_SEC", None)
+    try:
+        assert node.parse_positive_float_env(
+            "VOICE_STEP_FORWARD_SEC", node.DEFAULT_STEP_FORWARD_SEC
+        ) == node.DEFAULT_STEP_FORWARD_SEC
+    finally:
+        if previous is not None:
+            node.os.environ["VOICE_STEP_FORWARD_SEC"] = previous
+
+
+def test_parse_positive_float_env_accepts_valid_override():
+    node = load_node_module()
+
+    previous = node.os.environ.get("VOICE_STEP_FORWARD_SEC")
+    node.os.environ["VOICE_STEP_FORWARD_SEC"] = "1.2"
+    try:
+        assert node.parse_positive_float_env(
+            "VOICE_STEP_FORWARD_SEC", node.DEFAULT_STEP_FORWARD_SEC
+        ) == 1.2
+    finally:
+        if previous is None:
+            node.os.environ.pop("VOICE_STEP_FORWARD_SEC", None)
+        else:
+            node.os.environ["VOICE_STEP_FORWARD_SEC"] = previous
+
+
+def test_parse_positive_float_env_falls_back_for_invalid_value():
+    node = load_node_module()
+    logger, records = make_logger()
+
+    previous = node.os.environ.get("VOICE_STEP_FORWARD_SEC")
+    node.os.environ["VOICE_STEP_FORWARD_SEC"] = "abc"
+    try:
+        value = node.parse_positive_float_env(
+            "VOICE_STEP_FORWARD_SEC", node.DEFAULT_STEP_FORWARD_SEC, logger=logger
+        )
+    finally:
+        if previous is None:
+            node.os.environ.pop("VOICE_STEP_FORWARD_SEC", None)
+        else:
+            node.os.environ["VOICE_STEP_FORWARD_SEC"] = previous
+
+    assert value == node.DEFAULT_STEP_FORWARD_SEC
+    assert any("invalid VOICE_STEP_FORWARD_SEC='abc'" in message for message in records["warning"])
+
+
+def test_parse_positive_float_env_falls_back_for_non_positive_value():
+    node = load_node_module()
+    logger, records = make_logger()
+
+    previous = node.os.environ.get("VOICE_STEP_FORWARD_SEC")
+    node.os.environ["VOICE_STEP_FORWARD_SEC"] = "-1"
+    try:
+        value = node.parse_positive_float_env(
+            "VOICE_STEP_FORWARD_SEC", node.DEFAULT_STEP_FORWARD_SEC, logger=logger
+        )
+    finally:
+        if previous is None:
+            node.os.environ.pop("VOICE_STEP_FORWARD_SEC", None)
+        else:
+            node.os.environ["VOICE_STEP_FORWARD_SEC"] = previous
+
+    assert value == node.DEFAULT_STEP_FORWARD_SEC
+    assert any("expected > 0" in message for message in records["warning"])
+
+
 def make_logger():
     records = {"info": [], "warning": [], "error": []}
 
@@ -125,6 +194,7 @@ def make_fake_node(node_module):
     fake_node = types.SimpleNamespace(
         get_logger=lambda: logger,
         publish_twist=lambda linear_x, angular_z: published.append((linear_x, angular_z)),
+        _step_forward_sec=node_module.DEFAULT_STEP_FORWARD_SEC,
         _motion_lock=threading.Lock(),
         _motion_linear_x=0.0,
         _motion_angular_z=0.0,
@@ -227,7 +297,7 @@ def test_azure_tool_call_dispatches_step_forward_and_returns_output():
     session._latest_input_transcript = "前進して"
 
     original_monotonic = node.time.monotonic
-    values = iter([10.0, 10.1, 10.2, 10.31, 10.41, 10.51])
+    values = iter([10.0, 10.1, 10.2, 10.31, 10.41, 10.81, 10.91])
     node.time.monotonic = lambda: next(values)
     try:
         session._handle_server_event(
@@ -245,7 +315,7 @@ def test_azure_tool_call_dispatches_step_forward_and_returns_output():
         )
         pending = session._action_queue.get_nowait()
         output = session._execute_tool_call(pending)
-        for _ in range(4):
+        for _ in range(6):
             session._node._on_motion_tick()
         session._queue_client_event(
             {
@@ -265,9 +335,12 @@ def test_azure_tool_call_dispatches_step_forward_and_returns_output():
         (node.LINEAR_SPEED, 0.0),
         (node.LINEAR_SPEED, 0.0),
         (node.LINEAR_SPEED, 0.0),
+        (node.LINEAR_SPEED, 0.0),
+        (node.LINEAR_SPEED, 0.0),
         (0.0, 0.0),
         (0.0, 0.0),
     ]
+    assert output["duration_sec"] == node.DEFAULT_STEP_FORWARD_SEC
     assert any("azure_tool_call_completed name=step_forward" in message for message in records["info"])
     assert queued[0]["item"]["call_id"] == "call-1"
     assert queued[1] == {
@@ -328,13 +401,13 @@ def test_step_forward_tool_runs_even_for_non_movement_transcript():
     session._latest_input_transcript = "こんにちは"
 
     original_monotonic = node.time.monotonic
-    values = iter([20.0, 20.1, 20.2, 20.31, 20.41, 20.51])
+    values = iter([20.0, 20.1, 20.2, 20.31, 20.41, 20.81, 20.91])
     node.time.monotonic = lambda: next(values)
     try:
         output = session._execute_tool_call(
             node.PendingToolCall(call_id="call-3", name="step_forward", arguments_json="{}")
         )
-        for _ in range(4):
+        for _ in range(6):
             session._node._on_motion_tick()
     finally:
         node.time.monotonic = original_monotonic
@@ -343,11 +416,14 @@ def test_step_forward_tool_runs_even_for_non_movement_transcript():
         (node.LINEAR_SPEED, 0.0),
         (node.LINEAR_SPEED, 0.0),
         (node.LINEAR_SPEED, 0.0),
+        (node.LINEAR_SPEED, 0.0),
+        (node.LINEAR_SPEED, 0.0),
         (0.0, 0.0),
         (0.0, 0.0),
     ]
     assert output["ok"] is True
     assert output["executed"] == "step_forward"
+    assert output["duration_sec"] == node.DEFAULT_STEP_FORWARD_SEC
     assert any("azure_tool_call_completed name=step_forward" in message for message in records["info"])
 
 
@@ -371,6 +447,27 @@ def test_step_forward_can_be_interrupted_by_stop_robot():
         (node.LINEAR_SPEED, 0.0),
         (0.0, 0.0),
         (0.0, 0.0),
+    ]
+
+
+def test_step_forward_uses_configured_duration():
+    node = load_node_module()
+    fake_node, published, _records = make_fake_node(node)
+    fake_node._step_forward_sec = 1.2
+
+    original_monotonic = node.time.monotonic
+    values = iter([50.0, 51.1])
+    node.time.monotonic = lambda: next(values)
+    try:
+        fake_node.step_forward()
+        fake_node._on_motion_tick()
+    finally:
+        node.time.monotonic = original_monotonic
+
+    assert fake_node._motion_deadline == 51.2
+    assert published == [
+        (node.LINEAR_SPEED, 0.0),
+        (node.LINEAR_SPEED, 0.0),
     ]
 
 

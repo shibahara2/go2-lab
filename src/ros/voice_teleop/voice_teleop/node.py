@@ -29,7 +29,7 @@ FRAME_BYTES = FRAME_SAMPLES * 2
 
 COOLDOWN_SEC = 0.4
 LINEAR_SPEED = 0.5
-STEP_FORWARD_SEC = 0.3
+DEFAULT_STEP_FORWARD_SEC = 0.8
 MOTION_TICK_SEC = 0.1
 STOP_BURST_SEC = 0.3
 STOP_BURST_TICKS = max(1, math.ceil(STOP_BURST_SEC / MOTION_TICK_SEC))
@@ -73,7 +73,11 @@ class AzureToolCallExecutor:
         if pending.name == "step_forward":
             self._node.step_forward()
             self._log_completion("step_forward", arguments)
-            return {"ok": True, "executed": "step_forward", "duration_sec": STEP_FORWARD_SEC}
+            return {
+                "ok": True,
+                "executed": "step_forward",
+                "duration_sec": self._node._step_forward_sec,
+            }
         if pending.name == "stop_robot":
             self._node.stop_robot()
             self._log_completion("stop_robot", arguments)
@@ -161,13 +165,21 @@ class VoiceTeleopNode(Node):
     def __init__(self) -> None:
         super().__init__("voice_teleop")
         self.pub = self.create_publisher(Twist, "/cmd_vel", 10)
+        self._step_forward_sec = parse_positive_float_env(
+            "VOICE_STEP_FORWARD_SEC", DEFAULT_STEP_FORWARD_SEC, logger=self.get_logger()
+        )
         self._motion_lock = threading.Lock()
         self._motion_linear_x = 0.0
         self._motion_angular_z = 0.0
         self._motion_deadline = 0.0
         self._stop_publish_remaining = 0
         self._motion_timer = self.create_timer(MOTION_TICK_SEC, self._on_motion_tick)
-        self.get_logger().info("voice_teleop node ready; publishing Twist on /cmd_vel")
+        self.get_logger().info(
+            "voice_teleop node ready; publishing Twist on /cmd_vel "
+            f"step_forward_sec={self._step_forward_sec:.2f} "
+            f"motion_tick_sec={MOTION_TICK_SEC:.2f} "
+            f"stop_burst_sec={STOP_BURST_SEC:.2f}"
+        )
 
     def publish_twist(self, linear_x: float, angular_z: float) -> None:
         msg = Twist()
@@ -186,7 +198,7 @@ class VoiceTeleopNode(Node):
         with self._motion_lock:
             self._motion_linear_x = LINEAR_SPEED
             self._motion_angular_z = 0.0
-            self._motion_deadline = time.monotonic() + STEP_FORWARD_SEC
+            self._motion_deadline = time.monotonic() + self._step_forward_sec
             self._stop_publish_remaining = 0
 
     def _start_stop_burst(self, immediate: bool) -> None:
@@ -225,6 +237,29 @@ def detect_command(text: str) -> CommandMatch | None:
     if any(k in t for k in ["前進", "進ん", "進め", "まっすぐ", "前に", "前へ"]) or "forward" in t_lower:
         return CommandMatch("forward", "step_forward")
     return None
+
+
+def parse_positive_float_env(
+    name: str, default: float, logger=None
+) -> float:
+    raw_value = os.environ.get(name)
+    if raw_value is None:
+        return default
+    try:
+        value = float(raw_value.strip())
+    except ValueError:
+        if logger is not None:
+            logger.warning(
+                f"invalid {name}={raw_value!r}; using default {default:.2f}"
+            )
+        return default
+    if value <= 0.0:
+        if logger is not None:
+            logger.warning(
+                f"invalid {name}={raw_value!r}; expected > 0, using default {default:.2f}"
+            )
+        return default
+    return value
 
 
 class AsrEngine:
