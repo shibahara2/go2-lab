@@ -388,11 +388,15 @@ class AzureRealtimeSession:
             if time.time() >= deadline:
                 raise TimeoutError("timed out waiting for Azure Realtime session.update")
             time.sleep(0.05)
+        self.raise_if_error()
 
     def close(self) -> None:
-        if self._loop is not None and self._send_queue is not None:
-            self._loop.call_soon_threadsafe(self._send_queue.put_nowait, None)
-        if self._loop is not None and self._ws is not None:
+        if self._loop is not None and self._send_queue is not None and not self._loop.is_closed():
+            try:
+                self._loop.call_soon_threadsafe(self._send_queue.put_nowait, None)
+            except RuntimeError:
+                pass
+        if self._loop is not None and self._ws is not None and not self._loop.is_closed():
             try:
                 asyncio.run_coroutine_threadsafe(self._ws.close(), self._loop).result(timeout=5.0)
             except Exception:
@@ -414,7 +418,7 @@ class AzureRealtimeSession:
             "type": "input_audio_buffer.append",
             "audio": base64.b64encode(frame_i16.tobytes()).decode("ascii"),
         }
-        self._loop.call_soon_threadsafe(self._send_queue.put_nowait, payload)
+        self._queue_on_loop(payload)
 
     def raise_if_error(self) -> None:
         try:
@@ -444,6 +448,7 @@ class AzureRealtimeSession:
 
     async def _run_session(self) -> None:
         uri = build_azure_realtime_uri(self._endpoint, self._deployment_name)
+        self._node.get_logger().info("azure_realtime_transport_connecting")
         async with self._websockets.connect(
             uri,
             extra_headers={"api-key": self._api_key},
@@ -452,7 +457,9 @@ class AzureRealtimeSession:
             ping_timeout=20,
         ) as ws:
             self._ws = ws
+            self._node.get_logger().info("azure_realtime_transport_connected")
             await ws.send(json.dumps(self._session_update_payload()))
+            self._node.get_logger().info("azure_realtime_session_update_sent")
             sender_task = asyncio.create_task(self._sender_loop(ws))
             receiver_task = asyncio.create_task(self._receiver_loop(ws))
             done, pending = await asyncio.wait(
@@ -540,6 +547,7 @@ class AzureRealtimeSession:
     def _handle_error_event(self, event: dict) -> None:
         error = event.get("error") or {}
         message = error.get("message") or str(event)
+        self._node.get_logger().error(f"azure_realtime_server_error message={message!r}")
         self._errors.put(RuntimeError(message))
 
     def _handle_input_transcript(self, event: dict) -> None:
@@ -750,7 +758,19 @@ class AzureRealtimeSession:
     def _queue_client_event(self, payload: dict) -> None:
         if self._loop is None or self._send_queue is None:
             raise RuntimeError("Azure Realtime client is not started")
-        self._loop.call_soon_threadsafe(self._send_queue.put_nowait, payload)
+        self._queue_on_loop(payload)
+
+    def _queue_on_loop(self, payload: dict | None) -> None:
+        if self._loop is None or self._send_queue is None:
+            raise RuntimeError("Azure Realtime client is not started")
+        if self._closed.is_set() or self._loop.is_closed():
+            self.raise_if_error()
+            raise RuntimeError("Azure Realtime session closed")
+        try:
+            self._loop.call_soon_threadsafe(self._send_queue.put_nowait, payload)
+        except RuntimeError as exc:
+            self.raise_if_error()
+            raise RuntimeError("Azure Realtime session closed") from exc
 
     def _queue_followup_response(self) -> None:
         self._queue_client_event(

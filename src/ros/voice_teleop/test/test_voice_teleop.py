@@ -1,4 +1,5 @@
 import importlib
+import asyncio
 import queue
 import sys
 import threading
@@ -554,3 +555,66 @@ def test_response_audio_delta_is_forwarded_to_player():
     )
 
     assert captured == [b"\x01\x02"]
+
+
+def test_start_surfaces_background_failure_after_session_ready():
+    node = load_node_module()
+    session, _fake_node, _published, _records, _queued = make_session(node)
+
+    failure = RuntimeError("handshake failed")
+
+    def fake_run_loop():
+        session._transport_ready.set()
+        session._errors.put(failure)
+        session._session_ready.set()
+
+    session._thread = None
+    session._action_thread = None
+    session._run_loop = fake_run_loop
+
+    try:
+        session.start()
+    except RuntimeError as exc:
+        assert "handshake failed" in str(exc)
+    else:
+        raise AssertionError("expected start() to surface background failure")
+
+
+def test_send_audio_frame_surfaces_queued_error_when_loop_is_closed():
+    node = load_node_module()
+    session, _fake_node, _published, _records, _queued = make_session(node)
+    session._loop = asyncio.new_event_loop()
+    session._send_queue = object()
+    session._closed.set()
+    session._errors.put(RuntimeError("websocket closed by peer"))
+
+    frame = types.SimpleNamespace(tobytes=lambda: b"\x00\x01")
+    try:
+        session.send_audio_frame(frame)
+    except RuntimeError as exc:
+        assert "websocket closed by peer" in str(exc)
+        assert "Event loop is closed" not in str(exc)
+    else:
+        raise AssertionError("expected send_audio_frame() to surface queued error")
+    finally:
+        session._loop.close()
+
+
+def test_close_tolerates_already_closed_loop():
+    node = load_node_module()
+    session, _fake_node, _published, _records, _queued = make_session(node)
+    loop = asyncio.new_event_loop()
+    loop.close()
+
+    close_calls = []
+
+    class FakeWs:
+        async def close(self):
+            close_calls.append("closed")
+
+    session._loop = loop
+    session._send_queue = object()
+    session._ws = FakeWs()
+    session.close()
+
+    assert close_calls == []
