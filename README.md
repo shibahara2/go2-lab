@@ -116,10 +116,17 @@ make up
 - `ZENOH_ROUTER_IP`: 外部 router の IP
 - `ROS_DOMAIN_ID`: robot 側と揃える
 
-設定を反映します。
+`workstation` は設定だけ反映します。`dgx-spark` は専用コンテナを使うため、`make build` / `make up` ではなく `make dgx-spark-build` / `make dgx-spark-up` を使います。
 
 ```bash
 make sync-configs
+```
+
+`dgx-spark` を使う場合:
+
+```bash
+make dgx-spark-build
+make dgx-spark-up
 ```
 
 router 側:
@@ -127,7 +134,7 @@ TODO
 
 ### 4.3 共通
 
-初回のみ Livox SDK2 をインストールします。
+初回のみ Livox SDK2 をインストールします。対象は `robot` または Livox を直接扱う `workstation` で、`dgx-spark` では実行しません。
 
 ```bash
 make livox-sdk-install
@@ -155,7 +162,18 @@ make host-deps-install
 make target-build
 ```
 
-### 5.3 関連コマンド
+### 5.3 dgx-spark 側
+
+`dgx-spark` 側は専用コンテナに入り、その中で必要なビルドだけを実行します。通常は `voice_teleop` を `packages-select` で対象指定し、必要に応じて `zenoh` 関連だけを追加でビルドします。Livox や robot 近傍ノードのセットアップは行いません。
+
+```bash
+make dgx-spark-shell
+colcon build \
+  --packages-select voice_teleop \
+make zenoh-build
+```
+
+### 5.4 関連コマンド
 
 - `make target-build`: 常に `make colcon-build` を実行し、`DISTRIBUTED_MODE=1` のときだけ `make zenoh-build` を追加実行
 - `make colcon-build`: `src/ros` 配下の ROS パッケージをビルド
@@ -164,7 +182,7 @@ make target-build
 - `make dgx-spark-shell`: `dgx-spark` コンテナに入り、`/opt/ros/jazzy/setup.zsh` と workspace overlay を auto-source した状態でシェルを開く
 - `make dgx-spark-shell` の中では `make zenoh-build` / `make zenoh-client` も実行可能
 
-### 5.4 Python ノードを追加するときの依存の書き方
+### 5.5 Python ノードを追加するときの依存の書き方
 
 Python ノード固有の実行時依存 (PyPI ライブラリ相当 / apt 系ツール) は、そのパッケージの `package.xml` に `<exec_depend>` として rosdep キーで書きます (例: `python3-websockets`, `alsa-utils`)。`configs/deps/packages.txt` には書きません。`make host-deps-install` が `rosdep install --from-paths src/ros` を呼ぶため、package.xml 側の宣言だけで workstation / Jetson どちらにもインストールされます。rosdep で解決できないライブラリが必要になった場合は、方針転換として ADR を起票してください。背景は `docs/adr/0002-python-deps.md` を参照。
 
