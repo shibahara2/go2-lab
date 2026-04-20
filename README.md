@@ -92,7 +92,7 @@ make sync-configs
 
 ### 4.2 分散モード: robot + workstation/dgx-spark + external router (`DISTRIBUTED_MODE=1`)
 
-分散モードでは `robot` と、ROS topic を利用するもう一方の計算機 (`workstation` ホストまたは `dgx-spark` コンテナを動かすマシン) の両方で clone を用意し、それぞれの `.env` を編集します。zenoh router はこの repo では管理せず、外部で起動済みのものに接続します。
+分散モードでは `robot` と、ROS topic を利用するもう一方の計算機 (`workstation` ホストまたは `dgx-spark` コンテナを動かすマシン) の両方で clone を用意し、それぞれの `.env` を編集します。zenoh router はこの repo では管理せず、外部で起動済みのものに接続します。`dgx-spark` は `unitree_ros2` をネイティブ実行する前提ではなく、Humble 側または bridge/zenoh 経由で流れてくる topic を Jazzy ノードが利用する計算ノードとして扱います。
 
 `robot` 側:
 
@@ -125,12 +125,21 @@ make sync-configs
 router 側:
 TODO
 
-### 4.3 共通
+### 4.3 追加セットアップ: robot / workstation
 
-初回のみ Livox SDK2 をインストールします。
+`robot` または LiDAR を直接扱う `workstation` では、初回のみ Livox SDK2 をインストールします。`dgx-spark` では不要です。
 
 ```bash
 make livox-sdk-install
+```
+
+### 4.4 追加セットアップ: dgx-spark
+
+`dgx-spark` は専用コンテナで起動します。`unitree_ros2` や Livox を直接扱う環境ではないため、`make build` / `make up` や `make livox-sdk-install` は使いません。
+
+```bash
+make dgx-spark-build
+make dgx-spark-up
 ```
 
 ## 5. パッケージビルド
@@ -155,16 +164,29 @@ make host-deps-install
 make target-build
 ```
 
-### 5.3 関連コマンド
+### 5.3 dgx-spark 側
+
+`dgx-spark` 側は専用コンテナに入り、その中で必要なビルドだけを実行します。通常は `voice_teleop` を `packages-select` で対象指定し、必要に応じて `zenoh` 関連だけを追加でビルドします。Livox や robot 近傍ノードのセットアップは行いません。
+
+```bash
+make dgx-spark-shell
+colcon build \
+  --packages-select voice_teleop \
+make zenoh-build
+```
+
+### 5.4 関連コマンド
 
 - `make target-build`: 常に `make colcon-build` を実行し、`DISTRIBUTED_MODE=1` のときだけ `make zenoh-build` を追加実行
 - `make colcon-build`: `src/ros` 配下の ROS パッケージをビルド
 - `make zenoh-build`: `src/zenoh` と `src/zenoh-plugin-ros2dds` を `cargo build --release`
 - `make host-deps-install`: `configs/deps/packages.txt` の共通 apt パッケージに加え、`src/ros` 配下の各 `package.xml` を `rosdep install` で解決する
+- `make dgx-spark-build`: `dgx-spark` 専用 image を build
+- `make dgx-spark-up`: `dgx-spark` コンテナをバックグラウンド起動
 - `make dgx-spark-shell`: `dgx-spark` コンテナに入り、`/opt/ros/jazzy/setup.zsh` と workspace overlay を auto-source した状態でシェルを開く
 - `make dgx-spark-shell` の中では `make zenoh-build` / `make zenoh-client` も実行可能
 
-### 5.4 Python ノードを追加するときの依存の書き方
+### 5.5 Python ノードを追加するときの依存の書き方
 
 Python ノード固有の実行時依存 (PyPI ライブラリ相当 / apt 系ツール) は、そのパッケージの `package.xml` に `<exec_depend>` として rosdep キーで書きます (例: `python3-websockets`, `alsa-utils`)。`configs/deps/packages.txt` には書きません。`make host-deps-install` が `rosdep install --from-paths src/ros` を呼ぶため、package.xml 側の宣言だけで workstation / Jetson どちらにもインストールされます。rosdep で解決できないライブラリが必要になった場合は、方針転換として ADR を起票してください。背景は `docs/adr/0002-python-deps.md` を参照。
 
@@ -292,9 +314,9 @@ ros2 run voice_teleop voice_teleop
 
 比較時は `.env` の `VOICE_ASR_BACKEND` を切り替えて同じ手順を繰り返します。ログには `backend=...`, `stt_latency_ms=...`, `cmd_latency_ms=...`, `command=...`, `transcript=...` が 1 発話ごとに出るため、同一フレーズを複数回発話して backend ごとの差分を比較できます。`azure` の `stt_latency_ms` は Azure Realtime の `input_audio_buffer.speech_stopped` 受信から確定 transcript 受信までの時間です。
 
-`dgx-spark` image の ROS 2 Jazzy は Ubuntu 24.04/Noble 向けの公式手順に合わせて `universe` + `ros2-apt-source` で導入しています。加えて、将来 NVIDIA Isaac ROS パッケージを追加できるよう、NVIDIA の Isaac ROS apt repository と rosdep 定義も image 内に登録済みです。`voice_teleop` 自体は Isaac ROS 非依存ですが、DGX Spark 上の GPU ノードを今後増やすときの基盤として扱います。分散モードで DGX Spark 側から topic を publish / subscribe するため、image には `cargo` / `rustc` などの Rust toolchain も入っており、`make dgx-spark-shell` の中で `make zenoh-build` / `make zenoh-client` をそのまま実行できます。
+`dgx-spark` image の ROS 2 Jazzy は Ubuntu 24.04/Noble 向けの公式手順に合わせて `universe` + `ros2-apt-source` で導入しています。主目的は将来 NVIDIA Isaac ROS パッケージを追加できる基盤を先に整えることで、NVIDIA の Isaac ROS apt repository と rosdep 定義も image 内に登録済みです。`voice_teleop` 自体は Isaac ROS 非依存ですが、DGX Spark 上の GPU ノードを今後増やすときの基盤として扱います。一方、vendored `src/ros/unitree_ros2` upstream は Ubuntu 22.04 / ROS 2 Humble を主対象としているため、`dgx-spark` は `unitree_ros2` のネイティブ実行環境としては扱いません。分散モードでは DGX Spark 側で bridge/zenoh 経由の topic を publish / subscribe する想定です。image には `cargo` / `rustc` などの Rust toolchain も入っており、`make dgx-spark-shell` の中で `make zenoh-build` / `make zenoh-client` をそのまま実行できます。
 
-`dgx-spark` コンテナ内で ROS コマンドを使う場合は、素の `docker exec` ではなく `make dgx-spark-shell` を使ってください。ROS 2 と `install/setup.zsh` が自動で source されます。
+`dgx-spark` コンテナ内で ROS コマンドを使う場合は、素の `docker exec` ではなく `make dgx-spark-shell` を使ってください。ROS 2 と `install/setup.zsh` が自動で source されます。あわせて `src/ros/unitree_ros2/setup.sh` も source しますが、これは CycloneDDS/ネットワーク設定共有のためであり、`unitree_ros2` の Jazzy 対応を保証するものではありません。
 
 ## 7. 環境変数と設定ファイル
 
