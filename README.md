@@ -13,7 +13,7 @@
   - [3.3 go2.repos 取得](#33-go2repos-取得)
 - [4. 実行環境構築](#4-実行環境構築)
   - [4.1 標準モード: workstation (`DISTRIBUTED_MODE=0`)](#41-標準モード-workstation-distributed_mode0)
-  - [4.2 分散モード: robot + workstation + external router (`DISTRIBUTED_MODE=1`)](#42-分散モード-robot--workstation--external-router-distributed_mode1)
+  - [4.2 分散モード: robot + workstation/dgx-spark + external router (`DISTRIBUTED_MODE=1`)](#42-分散モード-robot--workstationdgx-spark--external-router-distributed_mode1)
   - [4.3 共通](#43-共通)
 - [5. パッケージビルド](#5-パッケージビルド)
 - [6. 起動順](#6-起動順)
@@ -92,14 +92,14 @@ make sync-configs
 
 ### 4.2 分散モード: robot + workstation/dgx-spark + external router (`DISTRIBUTED_MODE=1`)
 
-分散モードでは `robot` と、ROS topic を利用するもう一方の計算機 (`workstation` ホストまたは `dgx-spark` コンテナを動かすマシン) の両方で clone を用意し、それぞれの `.env` を編集します。zenoh router はこの repo では管理せず、外部で起動済みのものに接続します。
+分散モードでは `robot` と、ROS topic を利用する受け側 (`workstation` ホストまたは `dgx-spark` コンテナを動かすマシン) の両方で clone を用意し、それぞれの `.env` を編集します。zenoh router はこの repo では管理せず、外部で起動済みのものに接続します。受け側は `workstation` と `dgx-spark` で手順が異なります。
 
 `robot` 側:
 
 - `DISTRIBUTED_MODE=1`
 - `NETWORK_INTERFACE`: Go2 / MID360 と接続される Jetson 側 IF 名
 - `ZENOH_ROUTER_IP`: 外部 router の IP
-- `ROS_DOMAIN_ID`: workstation / dgx-spark 側と揃える
+- `ROS_DOMAIN_ID`: 選んだ受け側 (`workstation` または `dgx-spark`) と揃える
 
 設定を反映してコンテナを作成します。
 
@@ -109,22 +109,30 @@ make build
 make up
 ```
 
-`workstation` または `dgx-spark` 側:
+`workstation` 側:
 
 - `DISTRIBUTED_MODE=1`
 - `NETWORK_INTERFACE`: topic を publish / subscribe する側 Linux 環境で使う IF 名
 - `ZENOH_ROUTER_IP`: 外部 router の IP
 - `ROS_DOMAIN_ID`: robot 側と揃える
 
-`workstation` は設定だけ反映します。`dgx-spark` は専用コンテナを使うため、`make build` / `make up` ではなく `make dgx-spark-build` / `make dgx-spark-up` を使います。
+設定だけ反映します。
 
 ```bash
 make sync-configs
 ```
 
-`dgx-spark` を使う場合:
+`dgx-spark` 側:
+
+- `DISTRIBUTED_MODE=1`
+- `NETWORK_INTERFACE`: topic を publish / subscribe する側 Linux 環境で使う IF 名
+- `ZENOH_ROUTER_IP`: 外部 router の IP
+- `ROS_DOMAIN_ID`: robot 側と揃える
+
+`dgx-spark` は専用コンテナを使うため、設定反映に加えて `make build` / `make up` ではなく `make dgx-spark-build` / `make dgx-spark-up` を使います。
 
 ```bash
+make sync-configs
 make dgx-spark-build
 make dgx-spark-up
 ```
