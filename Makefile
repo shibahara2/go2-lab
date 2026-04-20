@@ -1,4 +1,5 @@
-DOCKER_COMPOSE = docker compose -f docker/docker-compose.yml --env-file .env
+JETSON_DOCKER_COMPOSE = docker compose -f docker/docker-compose.yml --env-file .env
+DGX_SPARK_DOCKER_COMPOSE = docker compose -f docker/docker-compose.yml -f docker/docker-compose.dgx-spark.yml --env-file .env
 SYNC_CONFIGS = ./scripts/sync_configs.sh
 ROS_SRC_PREFIX = src/ros/
 ZENOH_BUILD_ROOTS = src/zenoh src/zenoh-plugin-ros2dds
@@ -22,19 +23,19 @@ help:
 	@echo "  # ROS packages are built from $(ROS_SRC_PREFIX); Rust zenoh workspaces are optional"
 
 build:
-	$(DOCKER_COMPOSE) --profile jetson build jetson
+	$(JETSON_DOCKER_COMPOSE) --profile jetson build jetson
 
 up:
-	$(DOCKER_COMPOSE) --profile jetson up -d jetson
+	$(JETSON_DOCKER_COMPOSE) --profile jetson up -d jetson
 
 down:
-	$(DOCKER_COMPOSE) --profile jetson down
+	$(JETSON_DOCKER_COMPOSE) --profile jetson down
 
 ps:
-	$(DOCKER_COMPOSE) --profile jetson ps
+	$(JETSON_DOCKER_COMPOSE) --profile jetson ps
 
 logs:
-	$(DOCKER_COMPOSE) --profile jetson logs -f jetson
+	$(JETSON_DOCKER_COMPOSE) --profile jetson logs -f jetson
 
 shell:
 	$(CURDIR)/scripts/docker_shell.sh $(CURDIR)
@@ -111,13 +112,13 @@ livox-sdk-install:
 	cd src/Livox-SDK2 && mkdir -p build && cd build && cmake .. && make -j$$(nproc) && sudo make install
 
 dgx-spark-build:
-	$(DOCKER_COMPOSE) --profile dgx-spark build dgx-spark
+	$(DGX_SPARK_DOCKER_COMPOSE) --profile dgx-spark build dgx-spark
 
 dgx-spark-up:
-	$(DOCKER_COMPOSE) --profile dgx-spark up -d dgx-spark
+	$(DGX_SPARK_DOCKER_COMPOSE) --profile dgx-spark up -d dgx-spark
 
 dgx-spark-down:
-	$(DOCKER_COMPOSE) --profile dgx-spark down
+	$(DGX_SPARK_DOCKER_COMPOSE) --profile dgx-spark down
 
 dgx-spark-shell:
 	$(CURDIR)/scripts/dgx_spark_shell.sh $(CURDIR)

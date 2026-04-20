@@ -19,7 +19,7 @@ ASR のローカル化には NVIDIA Parakeet (`nvidia/parakeet-tdt_ctc-0.6b-ja`)
 voice_teleop のような重量 ML ノードは **プラットフォーム単位の専用 Docker イメージ内に閉じ込める**。ホスト側には pip / venv / uv を導入しない。
 
 1. **compose profile の粒度**: 既存 `jetson` と同じく「実行プラットフォーム名」で service / profile を切る。voice_teleop は「DGX Spark 上で動く機能の一つ」なので、専用 profile は機能名 (`voice_teleop`) ではなく platform 名 **`dgx-spark`** にする。将来 DGX Spark 上で追加の ML ノード (例: 物体検出) が増えても同じ image / service に相乗りできる構造にする。
-2. **新規ファイル**: `docker/Dockerfile.dgx-spark`, `docker-compose.yml` の `dgx-spark` service, `Makefile` の `dgx-spark-*` ターゲット。
+2. **新規ファイル**: `docker/Dockerfile.dgx-spark`, `docker-compose.dgx-spark.yml` の `dgx-spark` service, `Makefile` の `dgx-spark-*` ターゲット。Jetson 側は `docker-compose.yml` のみを読み、DGX Spark 側だけ追加 Compose を重ねる。
 3. **ベースイメージ**: `nvcr.io/nvidia/pytorch:*-py3` をベースにし、`pip install nemo_toolkit[asr]` で Parakeet ランタイムを構築する。NeMo コンテナは arm64 / Blackwell での適合性確認コストが高いため採用しない。
 4. **ROS の重複**: `dgx-spark` profile だけは Ubuntu 24.04 に合わせて ROS 2 Jazzy (`ros-jazzy-ros-base` + `rclpy` + `geometry_msgs`) を image 内に apt で再導入する。ROS 2 apt source の追加は Jazzy/Noble の公式手順どおり **`universe` 有効化 + `ros2-apt-source`** を使う。host / jetson / その他 profile は引き続き Humble 固定とする。`jetson` image と重複するが、ML スタックを相乗りさせないほうが起動時間・image サイズ・依存衝突リスクの面で安全。
 5. **Isaac ROS 対応**: `dgx-spark` image には NVIDIA Isaac ROS apt repository と rosdep definitions も追加し、将来 `ros-jazzy-isaac-*` 系パッケージを install できる基盤を先に用意する。ただし ROS 本体の配布元は引き続き ROS 公式 repository とし、Isaac ROS repo は追加配布元としてのみ扱う。

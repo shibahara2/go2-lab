@@ -129,7 +129,7 @@ make sync-configs
 - `ZENOH_ROUTER_IP`: 外部 router の IP
 - `ROS_DOMAIN_ID`: robot 側と揃える
 
-`dgx-spark` は専用コンテナを使うため、設定反映に加えて `make build` / `make up` ではなく `make dgx-spark-build` / `make dgx-spark-up` を使います。
+`dgx-spark` は専用コンテナを使うため、設定反映に加えて `make build` / `make up` ではなく `make dgx-spark-build` / `make dgx-spark-up` を使います。Compose 定義も Jetson 用と分離してあり、Jetson 側の `make build` が `dgx-spark` の GPU 設定を検証して失敗することはありません。
 
 ```bash
 make sync-configs
@@ -354,6 +354,8 @@ ros2 run voice_teleop voice_teleop
 ## 8. 補足
 
 Jetson で複数ターミナルを開いて作業する場合は、SSH multiplexing や zellij レイアウトを使うと運用しやすくなります。ただし、これらは本リポジトリの必須要件ではありません。
+
+Jetson 系コマンド (`make build`, `make up`, `make shell`) は `docker/docker-compose.yml` だけを参照します。DGX Spark 系コマンド (`make dgx-spark-build`, `make dgx-spark-up`) は追加の Compose 定義 `docker/docker-compose.dgx-spark.yml` を重ねて読み込みます。
 
 DGX Spark プロファイル (`make dgx-spark-build`, `make dgx-spark-up`) は Docker Compose の GPU 要求 (`gpus: all`) を使います。ホスト側では NVIDIA driver と Docker の GPU 連携が有効である必要がありますが、Docker daemon に `nvidia` runtime 名を登録しておく必要はありません。
 
