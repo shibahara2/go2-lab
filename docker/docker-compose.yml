@@ -1,47 +1,35 @@
 x-common: &common
   network_mode: "host"
   command: /bin/zsh -c "while sleep 1000; do :; done"
+  volumes:
+    - ..:/workspace:cached
+    - /tmp/.X11-unix:/tmp/.X11-unix:rw
+  env_file: ../.env
+  ipc: "host"
 
 services:
-  jetson:
+  robot:
     <<: *common
-    profiles: ["jetson"]
+    profiles: ["robot"]
     platform: linux/arm64
-    volumes:
-      - ..:/workspace:cached
-      - /tmp/.X11-unix:/tmp/.X11-unix:rw
-    env_file: ../.env
     build:
       context: ..
-      dockerfile: docker/Dockerfile
+      dockerfile: docker/Dockerfile.robot
       args:
-        BASE_IMAGE: althack/ros2:humble-full
+        BASE_IMAGE: ${ROBOT_BASE_IMAGE:-althack/ros2:humble-full}
       network: host
-    image: go2-lab:jetson
-    container_name: jetson
-    ipc: "host"
+    image: go2-lab:robot
+    container_name: robot
     runtime: nvidia
 
-  dgx-spark:
+  workstation:
     <<: *common
-    profiles: ["dgx-spark"]
-    platform: ${DGX_SPARK_PLATFORM:-linux/arm64}
-    gpus: all
-    volumes:
-      - ..:/workspace:cached
-      - ${HOME}/.cache/huggingface:/root/.cache/huggingface
-      - /tmp/.X11-unix:/tmp/.X11-unix:rw
-    devices:
-      - /dev/snd:/dev/snd
-    group_add:
-      - audio
-    env_file: ../.env
+    profiles: ["workstation"]
     build:
       context: ..
-      dockerfile: docker/Dockerfile.dgx-spark
+      dockerfile: docker/Dockerfile.workstation
       args:
-        BASE_IMAGE: ${DGX_SPARK_BASE_IMAGE:-nvcr.io/nvidia/pytorch:25.10-py3}
+        BASE_IMAGE: ${WORKSTATION_BASE_IMAGE:-althack/ros2:humble-full}
       network: host
-    image: go2-lab:dgx-spark
-    container_name: dgx-spark
-    ipc: "host"
+    image: go2-lab:workstation
+    container_name: workstation

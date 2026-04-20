@@ -1,6 +1,5 @@
-# DGX Spark (arm64, Grace Blackwell + GPU) image for go2-lab.
-# Hosts ML-heavy ROS nodes such as voice_teleop that need CUDA + local ASR.
-# Dependencies are intentionally isolated here rather than on the host.
+# DGX Spark Jazzy image for GPU and AI workloads.
+# Keeps Isaac ROS and local AI dependencies isolated from the Humble runtimes.
 # See docs/adr/0003-dgx-spark-container.md.
 
 ARG BASE_IMAGE=nvcr.io/nvidia/pytorch:25.10-py3
@@ -13,8 +12,6 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 USER root
 
-# Configure ROS 2 Jazzy from the official Noble instructions, then add
-# NVIDIA's Isaac ROS repo as an additional package source.
 RUN apt-get update && apt-get install -y --no-install-recommends \
       ca-certificates \
       curl \
@@ -58,13 +55,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       > /etc/ros/rosdep/sources.list.d/00-nvidia-isaac.list \
  && rm -rf /var/lib/apt/lists/*
 
-# Python ML deps for voice_teleop.
-# Use a PyTorch base by default because the generic NeMo tag is not reliably arm64.
-# Pin transformers: current NeMo ASR still imports `Conv1D` from
-# `transformers.modeling_utils`, which disappeared in transformers 4.48+.
-# Pin numpy<2: some NeMo/ASR transitive deps still access `np.sctypes`,
-# which was removed in NumPy 2.0 and breaks transcription before /cmd_vel
-# can be published.
 RUN pip install --no-cache-dir \
       "cuda-python>=12.4,<13" \
       "nemo_toolkit[asr]" \
@@ -72,7 +62,6 @@ RUN pip install --no-cache-dir \
       "transformers<4.48" \
  && pip uninstall -y torchvision flash-attn
 
-# Nice-to-have shell
 RUN apt-get update && apt-get install -y --no-install-recommends zsh && \
     wget -qO /tmp/install.sh https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh && \
     chmod +x /tmp/install.sh && /tmp/install.sh --unattended && rm /tmp/install.sh && \

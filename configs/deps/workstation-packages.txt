@@ -1,0 +1,5 @@
+# Simulation and desktop-oriented tools for workstation-like runtimes.
+ros-humble-gazebo-plugins
+ros-humble-gazebo-ros-pkgs
+ros-humble-joint-state-publisher
+ros-humble-joint-state-publisher-gui

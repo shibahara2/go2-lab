@@ -14,7 +14,7 @@ fi
 
 if [[ "${DISTRIBUTED_MODE:-0}" != "1" ]]; then
   echo "zenoh client is disabled because DISTRIBUTED_MODE=${DISTRIBUTED_MODE:-0}." >&2
-  echo "Default mode uses workstation host + optional Jetson container." >&2
+  echo "Default mode uses workstation host GUI + workstation container." >&2
   echo "Set DISTRIBUTED_MODE=1 in .env to enable distributed mode." >&2
   exit 1
 fi

@@ -1,0 +1,46 @@
+x-common: &common
+  network_mode: "host"
+  command: /bin/zsh -c "while sleep 1000; do :; done"
+  volumes:
+    - ..:/workspace:cached
+    - /tmp/.X11-unix:/tmp/.X11-unix:rw
+  env_file: ../.env
+  ipc: "host"
+
+services:
+  dgx-spark-humble:
+    <<: *common
+    profiles: ["dgx-spark", "dgx-spark-humble"]
+    platform: ${DGX_SPARK_HUMBLE_PLATFORM:-linux/arm64}
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.dgx-spark-humble
+      args:
+        BASE_IMAGE: ${DGX_SPARK_HUMBLE_BASE_IMAGE:-althack/ros2:humble-full}
+      network: host
+    image: go2-lab:dgx-spark-humble
+    container_name: dgx-spark-humble
+
+  dgx-spark-jazzy:
+    <<: *common
+    profiles: ["dgx-spark", "dgx-spark-jazzy"]
+    platform: ${DGX_SPARK_JAZZY_PLATFORM:-linux/arm64}
+    gpus: all
+    volumes:
+      - ..:/workspace:cached
+      - ${HOME}/.cache/huggingface:/root/.cache/huggingface
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+    devices:
+      - /dev/snd:/dev/snd
+    group_add:
+      - audio
+    env_file: ../.env
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.dgx-spark-jazzy
+      args:
+        BASE_IMAGE: ${DGX_SPARK_JAZZY_BASE_IMAGE:-nvcr.io/nvidia/pytorch:25.10-py3}
+      network: host
+    image: go2-lab:dgx-spark-jazzy
+    container_name: dgx-spark-jazzy
+    ipc: "host"
