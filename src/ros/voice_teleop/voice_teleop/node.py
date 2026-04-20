@@ -901,8 +901,8 @@ def ensure_websockets_runtime_compatibility(websockets_module) -> None:
         raise RuntimeError(
             "python3-websockets is too old for this Python runtime: "
             f"python={sys.version.split()[0]} websockets={version_text} path={module_path}. "
-            "Use the system Python inside the robot container, rerun `make host-deps-install`, "
-            "and rebuild the workspace inside that same container."
+            "Rebuild the robot container image with `make build`, restart it with `make up`, "
+            "then rebuild the workspace inside that same container."
         )
 
 

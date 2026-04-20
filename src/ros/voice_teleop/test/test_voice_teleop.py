@@ -134,6 +134,7 @@ def test_ensure_websockets_runtime_compatibility_rejects_old_version_on_python31
         except RuntimeError as exc:
             assert "too old" in str(exc)
             assert "websockets=9.1" in str(exc)
+            assert "make build" in str(exc)
         else:
             raise AssertionError("expected compatibility check to reject old websockets")
     finally:

@@ -9,6 +9,11 @@ RUN apt-get update && \
     grep -v '^\s*#' /tmp/packages.txt | grep -v '^\s*$' | \
     xargs apt-get install -y
 
+# Ubuntu 22.04 / ROS Humble ships python3-websockets 9.1, which is too old for
+# Python 3.10 in Azure Realtime mode. Keep apt as the base dependency source,
+# then override only this package inside the Jetson container runtime.
+RUN pip3 install --no-cache-dir "websockets>=10,<12"
+
 # install zsh and oh-my-zsh
 RUN apt-get install -y zsh wget && \
     wget -O /tmp/install.sh https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh && \

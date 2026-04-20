@@ -332,8 +332,9 @@ make zenoh-client
 ターミナル 2:
 
 ```bash
+make build
+make up
 make shell
-make host-deps-install
 rm -rf build/ install/ log/
 make colcon-build
 source install/setup.bash
@@ -341,7 +342,7 @@ python3 -c "import sys, websockets; print(sys.version); print(sys.executable); p
 ros2 run voice_teleop voice_teleop
 ```
 
-`azure` backend で `As of 3.10, the *loop* parameter was removed from Lock()` のようなエラーが出る場合、`ros2 run` が apt 管理の `python3-websockets` と不整合な Python 実行環境を踏んでいます。上の手順で container 内の依存再同期と rebuild をやり直し、`python3` と `websockets.__file__` が container の system path (`/usr/bin/python3`, `/usr/lib/python3/dist-packages/...`) を向いていることを確認してください。
+`azure` backend で `As of 3.10, the *loop* parameter was removed from Lock()` のようなエラーが出る場合、Jetson image 内の apt `python3-websockets` が古すぎます。`make build && make up` で image を更新し直したあと、container 内で workspace を rebuild してください。確認コマンドの出力は `python3` が `/usr/bin/python3`、`websockets.__file__` が `/usr/local/lib/python3.10/dist-packages/...` を指していれば正常です。
 
 起動 (`dgx-spark`, `VOICE_ASR_BACKEND=azure` または `parakeet`):
 

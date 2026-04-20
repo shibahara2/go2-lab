@@ -49,3 +49,4 @@ voice_teleop のような重量 ML ノードは **プラットフォーム単位
 ## Addendum
 
 - 2026-04-21: `voice_teleop` の lightweight backend として Azure OpenAI Realtime (`VOICE_ASR_BACKEND=azure`) を `robot` の Jetson コンテナでも正式サポートした。`parakeet` は引き続き ML-heavy backend として `dgx-spark` 専用に据え置く。`robot` 側では `/dev/snd` を Jetson コンテナへ渡し、`alsa-utils` / `python3-websockets` などの軽量依存だけを共通 runtime に追加する。
+- 2026-04-21: Ubuntu 22.04 / ROS Humble の apt `python3-websockets` は 9.1 で、Python 3.10 上の Azure Realtime 実行には古すぎることが分かった。`robot` の Jetson コンテナだけは apt をベースにしつつ、Dockerfile で `websockets>=10,<12` を pip override する。ホスト側には引き続き pip を導入しない。
