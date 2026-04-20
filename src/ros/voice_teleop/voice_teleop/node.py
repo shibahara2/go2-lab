@@ -344,6 +344,7 @@ class AzureRealtimeSession:
             raise RuntimeError(
                 "python3-websockets is not installed in this environment"
             ) from exc
+        ensure_websockets_runtime_compatibility(websockets)
 
         self._node = node
         self._endpoint = endpoint
@@ -875,6 +876,53 @@ def parse_azure_openai_api_key(value: str | None) -> str:
     return api_key
 
 
+def parse_simple_version(version: str | None) -> tuple[int, ...]:
+    if not version:
+        return ()
+    parts = []
+    for token in version.split("."):
+        digits = []
+        for ch in token:
+            if ch.isdigit():
+                digits.append(ch)
+            else:
+                break
+        if not digits:
+            break
+        parts.append(int("".join(digits)))
+    return tuple(parts)
+
+
+def ensure_websockets_runtime_compatibility(websockets_module) -> None:
+    version = parse_simple_version(getattr(websockets_module, "__version__", None))
+    if sys.version_info >= (3, 10) and version and version < (10,):
+        version_text = getattr(websockets_module, "__version__", "unknown")
+        module_path = getattr(websockets_module, "__file__", "unknown")
+        raise RuntimeError(
+            "python3-websockets is too old for this Python runtime: "
+            f"python={sys.version.split()[0]} websockets={version_text} path={module_path}. "
+            "Use the system Python inside the robot container, rerun `make host-deps-install`, "
+            "and rebuild the workspace inside that same container."
+        )
+
+
+def log_python_runtime(node: VoiceTeleopNode, asr_backend: str) -> None:
+    parts = [
+        f"backend={asr_backend}",
+        f"python={sys.version.split()[0]}",
+        f"executable={sys.executable}",
+    ]
+    if asr_backend == "azure":
+        try:
+            import websockets
+        except ImportError:
+            parts.append("websockets=missing")
+        else:
+            parts.append(f"websockets={getattr(websockets, '__version__', 'unknown')}")
+            parts.append(f"websockets_path={getattr(websockets, '__file__', 'unknown')}")
+    node.get_logger().info("runtime_env " + " ".join(parts))
+
+
 def build_azure_realtime_uri(endpoint: str, deployment_name: str) -> str:
     parsed = urllib.parse.urlparse(endpoint)
     scheme = "wss" if parsed.scheme == "https" else "ws"
@@ -1082,6 +1130,7 @@ def main() -> int:
 
     try:
         node.get_logger().info(f"loading ASR backend={asr_backend}")
+        log_python_runtime(node, asr_backend)
         node.get_logger().info(f"capturing from {capture_dev} @ {SR} Hz")
         if asr_backend == "azure":
             azure_session = create_azure_realtime_session(node)

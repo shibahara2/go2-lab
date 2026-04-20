@@ -108,6 +108,61 @@ def test_parse_azure_openai_env_helpers_and_realtime_uri():
         raise AssertionError("expected ValueError for invalid endpoint")
 
 
+def test_parse_simple_version_extracts_numeric_prefix():
+    node = load_node_module()
+
+    assert node.parse_simple_version("10.4") == (10, 4)
+    assert node.parse_simple_version("9.1rc1") == (9, 1)
+    assert node.parse_simple_version(None) == ()
+
+
+def test_ensure_websockets_runtime_compatibility_rejects_old_version_on_python310_plus():
+    node = load_node_module()
+
+    original_version_info = node.sys.version_info
+    original_version = node.sys.version
+    node.sys.version_info = (3, 10, 0)
+    node.sys.version = "3.10.12"
+    try:
+        try:
+            node.ensure_websockets_runtime_compatibility(
+                types.SimpleNamespace(
+                    __version__="9.1",
+                    __file__="/usr/lib/python3/dist-packages/websockets/__init__.py",
+                )
+            )
+        except RuntimeError as exc:
+            assert "too old" in str(exc)
+            assert "websockets=9.1" in str(exc)
+        else:
+            raise AssertionError("expected compatibility check to reject old websockets")
+    finally:
+        node.sys.version_info = original_version_info
+        node.sys.version = original_version
+
+
+def test_log_python_runtime_includes_websockets_details_for_azure():
+    node = load_node_module()
+    logger, records = make_logger()
+    fake_node = types.SimpleNamespace(get_logger=lambda: logger)
+
+    original_module = sys.modules.get("websockets")
+    sys.modules["websockets"] = types.SimpleNamespace(
+        __version__="10.4",
+        __file__="/usr/lib/python3/dist-packages/websockets/__init__.py",
+    )
+    try:
+        node.log_python_runtime(fake_node, "azure")
+    finally:
+        if original_module is None:
+            sys.modules.pop("websockets", None)
+        else:
+            sys.modules["websockets"] = original_module
+
+    assert any("runtime_env backend=azure" in message for message in records["info"])
+    assert any("websockets=10.4" in message for message in records["info"])
+
+
 def test_parse_positive_float_env_uses_default_when_unset():
     node = load_node_module()
 
